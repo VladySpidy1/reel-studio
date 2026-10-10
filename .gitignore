@@ -1,0 +1,19 @@
+# Build artefacts and renders (regenerable, large)
+build/
+output/
+
+# Source footage and rendered video
+*.MOV
+*.mov
+*.MP4
+*.mp4
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db

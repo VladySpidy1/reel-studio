@@ -1,0 +1,384 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: 'Main'; src: url('../assets/fonts/RobotoCondensed-VF.ttf'); font-weight: 100 900; }
+  @font-face { font-family: 'Accent'; src: url('../assets/fonts/PlayfairDisplay-Italic-VF.ttf'); font-weight: 400 900; font-style: italic; }
+  @font-face { font-family: 'Serif'; src: url('../assets/fonts/PlayfairDisplay-VF.ttf'); font-weight: 400 900; }
+  html, body { margin: 0; width: 1080px; height: 1920px; background: transparent; overflow: hidden; }
+  #stage { position: absolute; inset: 0; }
+  .block { position: absolute; left: 0; top: 0; display: none; }
+  .ch { position: absolute; left: 0; top: 0; white-space: pre; line-height: normal; }
+  .probe { display: inline-block; width: 0; height: 0; vertical-align: baseline; }
+  .mline { position: absolute; left: 0; top: 0; white-space: pre; line-height: normal; }
+  #measure { position: absolute; left: 0; top: 0; visibility: hidden; }
+  .debug { position: absolute; border: 2px dashed rgba(0,255,0,.8); box-sizing: border-box; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="measure"></div>
+<script>
+// ---------------------------------------------------------------------------
+// Deterministic subtitle renderer. Python calls init(timeline) once, then seek(t)
+// per frame and screenshots the transparent page.
+// Letters are laid out in a normal text run (so kerning + tracking are exact), then each
+// glyph is cloned into an absolutely positioned span at its measured pen position so it can
+// be animated individually without changing the typography.
+// ---------------------------------------------------------------------------
+let TL = null;
+let BLOCKS = [];      // {el, screen, chars:[{el, start, anim, baseline}], bbox}
+window.ready = Promise.resolve();
+
+function styleFor(kind, S, tok) {
+  const st = styleForKind(kind, S);
+  if (tok && tok.scale) st.size *= tok.scale;
+  return st;
+}
+
+function styleForKind(kind, S) {
+  const m = S.main;
+  const base = { family: m.family, weight: m.weight, italic: false, color: m.color, size: m.size, tracking: m.tracking };
+  if (kind === 'accent') return { ...base, family: S.accent.family, weight: S.accent.weight, italic: true,
+                                  color: S.accent.color, size: m.size * S.accent.scale, tracking: S.accent.tracking,
+                                  outline: S.accent.outline };
+  if (kind === 'accent-white') return { ...base, family: S.accent.family, weight: S.accent.weight, italic: true,
+                                  size: m.size * S.accent.scale, tracking: S.accent.tracking };
+  if (kind === 'deco') return { ...base, color: S.accent.color, outline: S.accent.outline };
+  if (kind === 'label') return { ...base, family: S.label.family, weight: S.label.weight, color: S.label.color,
+                                 size: m.size * S.label.scale, tracking: S.label.tracking };
+  return base;
+}
+
+function applyFont(el, st) {
+  el.style.fontFamily = `'${st.family}'`;
+  el.style.fontFeatureSettings = st.family === 'Serif' ? '"lnum" 1, "case" 1' : 'normal';
+  el.style.textShadow = st.outline || 'none';
+  el.style.fontWeight = st.weight;
+  el.style.fontStyle = st.italic ? 'italic' : 'normal';
+  el.style.fontSize = st.size + 'px';
+  el.style.letterSpacing = (st.tracking || 0) + 'em';
+  el.style.color = st.color;
+}
+
+function baselineOf(el) {
+  const p = document.createElement('span');
+  p.className = 'probe';
+  el.appendChild(p);
+  const r = p.getBoundingClientRect(), e = el.getBoundingClientRect();
+  el.removeChild(p);
+  return r.bottom - e.top;
+}
+
+// Build the visual line in the hidden measure layer; returns per-char pen positions.
+function layoutLine(line, S) {
+  const div = document.createElement('div');
+  div.className = 'mline';
+  document.getElementById('measure').appendChild(div);
+  const spans = [];
+  line.tokens.forEach((tok, i) => {
+    if (i > 0 && !tok.glue) {
+      const sp = document.createElement('span');
+      applyFont(sp, styleFor(line.tokens[i - 1].kind === 'accent' && tok.kind === 'accent' ? 'accent' : 'main', S));
+      sp.textContent = ' ';
+      sp.style.wordSpacing = (S.word_space || 0) + 'em';
+      sp.dataset.space = '1';
+      div.appendChild(sp);
+      spans.push({ el: sp, tok: null });
+    }
+    const s = document.createElement('span');
+    applyFont(s, styleFor(tok.kind, S, tok));
+    s.textContent = tok.text;
+    div.appendChild(s);
+    spans.push({ el: s, tok });
+  });
+  const base = baselineOf(div);
+  const d0 = div.getBoundingClientRect();
+  const chars = [];
+  for (const { el, tok } of spans) {
+    if (!tok) continue;
+    const node = el.firstChild;
+    const st = styleFor(tok.kind, S, tok);
+    // iterate by code points
+    let idx = 0;
+    for (const c of tok.text) {
+      const r = document.createRange();
+      r.setStart(node, idx); r.setEnd(node, idx + c.length);
+      const rect = r.getBoundingClientRect();
+      chars.push({ c, x: rect.left - d0.left, w: rect.width, tok, st });
+      idx += c.length;
+    }
+  }
+  const width = d0.width;
+  div.remove();
+  return { chars, width, base };
+}
+
+async function init(timeline) {
+  TL = timeline;
+  await Promise.all(['400 56px Main','italic 500 56px Accent','400 56px Serif'].map(f => document.fonts.load(f, 'абвгґдеєжзиіїйклмн№()')));
+  await document.fonts.ready;
+  const S = TL.style;
+  const stage = document.getElementById('stage');
+  stage.innerHTML = '';
+  BLOCKS = [];
+  TL.screens.forEach((screen, si) => {
+    screen.blocks.forEach((blk) => {
+      const el = document.createElement('div');
+      el.className = 'block';
+      el.style.filter = S.shadow;
+      el.style.display = 'block';          // must be rendered while glyph baselines are measured
+      stage.appendChild(el);
+      const LH = S.main.size * (blk.leading || S.leading);
+      const lines = blk.lines.map(l => layoutLine(l, S));
+      const bw = Math.max(...lines.map((l, i) => l.width + (blk.lines[i].indent || 0) * S.main.size));
+      const chars = [];
+      let minTop = 1e9, maxBot = -1e9, minX = 1e9, maxX = -1e9, extra = 0;
+      lines.forEach((ln, li) => {
+        const spec = blk.lines[li];
+        const indentPx = (spec.indent || 0) * S.main.size;
+        const lineAlign = spec.align || blk.align || 'left';
+        let x0 = lineAlign === 'right' ? bw - ln.width - indentPx : indentPx;
+        if (lineAlign !== 'right' && ln.chars.length && '([«'.includes(ln.chars[0].c)) x0 -= ln.chars[0].w * 0.85;
+        // a scaled line pushes itself (and everything below it) down by its extra cap height
+        const lineScale = Math.max(1, ...spec.tokens.map(t => t.scale || 1));
+        extra += (lineScale - 1) * S.main.size * 0.74;
+        // serif accents / labels have taller ascenders, brackets and descenders than the grotesk:
+        // give those lines (and the line after them) just enough room so pink never sits on white
+        const tall = tk => tk.kind === 'accent' || tk.kind === 'accent-white' || tk.kind === 'label';
+        if (li > 0 && spec.tokens.some(tall)) extra += S.main.size * (S.accent_gap ?? 0.16);
+        if (li > 0 && blk.lines[li - 1].tokens.some(tall)) extra += S.main.size * (S.accent_gap_after ?? 0.1);
+        const baselineY = (spec.dy || 0) * S.main.size + li * LH + extra + (blk.first_baseline || S.main.size * 0.8);
+        for (const ch of ln.chars) {
+          if (ch.c === ' ') continue;
+          const s = document.createElement('span');
+          s.className = 'ch';
+          applyFont(s, ch.st);
+          s.textContent = ch.c;
+          el.appendChild(s);
+          const b = baselineOf(s);
+          const left = x0 + ch.x, top = baselineY - b;
+          s.style.left = left + 'px';
+          s.style.top = top + 'px';
+          s.style.transformOrigin = `0px ${b}px`;
+          minTop = Math.min(minTop, baselineY - ch.st.size * 0.74);
+          maxBot = Math.max(maxBot, baselineY + ch.st.size * 0.22);
+          minX = Math.min(minX, left); maxX = Math.max(maxX, left + ch.w);
+          chars.push({ el: s, tok: ch.tok, start: 0, kind: ch.tok.kind, left, top, w: ch.w, baselineY, size: ch.st.size,
+                       anim: ch.tok.anim || (ch.tok.kind === 'label' ? 'pop' : S.anim.kind) });
+        }
+      });
+      // pop animations scale whole words around the word centre
+      const byTok = new Map();
+      for (const ch of chars) { if (!byTok.has(ch.tok)) byTok.set(ch.tok, []); byTok.get(ch.tok).push(ch); }
+      for (const [tok, cs] of byTok) {
+        if (cs[0].anim !== 'pop') continue;
+        const cx = (Math.min(...cs.map(c => c.left)) + Math.max(...cs.map(c => c.left + c.w))) / 2;
+        const cy = cs[0].baselineY - cs[0].size * 0.33;
+        for (const c of cs) c.el.style.transformOrigin = `${cx - c.left}px ${cy - c.top}px`;
+      }
+      // reveal schedule: sequential typing inside the block, never before the token's own time
+      let prev = -1e9;
+      const cps = blk.cps || S.anim.cps;
+      for (const ch of chars) {
+        const t = ch.tok.t;
+        if (ch.anim === 'pop' || ch.anim === 'none') { ch.start = t; continue; }
+        ch.start = Math.max(t, prev + 1 / cps);
+        prev = ch.start;
+      }
+      const bx = blk.x || 0, by = blk.y || 0;
+      el.style.left = bx + 'px';
+      el.style.top = by + 'px';
+      el.style.display = 'none';
+      BLOCKS.push({ el, screen, blk, chars, bbox: { x: bx + minX, y: by + minTop, w: maxX - minX, h: maxBot - minTop } });
+    });
+  });
+  initDoodles(TL.doodles || [], S);
+  return true;
+}
+
+// ----------------------------------------------------------------------------- doodles (hand-drawn SVG)
+let DOODLES = [];
+const SVGNS = 'http://www.w3.org/2000/svg';
+
+function polyD(pts) {
+  return 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L');
+}
+
+function doodlePaths(d) {
+  const P = [];
+  if (d.type === 'circle') {               // loose hand-drawn ellipse, ~1.15 turns
+    const cx = d.x + d.w / 2, cy = d.y + d.h / 2, rx = d.w / 2, ry = d.h / 2, a0 = (d.a0 ?? -2.2);
+    const pts = [];
+    for (let i = 0; i <= 90; i++) {
+      const a = a0 + (i / 90) * Math.PI * 2 * 1.15;
+      const r = 1 + 0.05 * Math.sin(3 * a + 0.7) + 0.06 * (i / 90);
+      pts.push([cx + rx * r * Math.cos(a), cy + ry * r * Math.sin(a)]);
+    }
+    P.push({ d: polyD(pts), share: 1 });
+  } else if (d.type === 'arrow') {          // curved arrow from (x,y) to (x+w, y+h)
+    const x1 = d.x, y1 = d.y, x2 = d.x + d.w, y2 = d.y + d.h;
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, bend = (d.bend ?? 0.3);
+    const qx = mx - d.h * bend, qy = my + d.w * bend;
+    P.push({ d: `M${x1} ${y1} Q${qx} ${qy} ${x2} ${y2}`, share: 0.72 });
+    const ang = Math.atan2(y2 - qy, x2 - qx), hl = (d.head ?? 26);
+    const h1 = [x2 - hl * Math.cos(ang - 0.5), y2 - hl * Math.sin(ang - 0.5)];
+    const h2 = [x2 - hl * Math.cos(ang + 0.5), y2 - hl * Math.sin(ang + 0.5)];
+    P.push({ d: polyD([h1, [x2, y2], h2]), share: 0.28 });
+  } else if (d.type === 'underline') {      // wavy underline
+    const pts = [];
+    for (let i = 0; i <= 40; i++) pts.push([d.x + d.w * i / 40, d.y + (d.amp ?? 6) * Math.sin(i / 40 * Math.PI * (d.waves ?? 3) * 2)]);
+    P.push({ d: polyD(pts), share: 1 });
+  }
+  return P;
+}
+
+function starD(r) {                          // 4-point sparkle centred at 0,0
+  const k = 0.22, pts = [];
+  for (let i = 0; i < 8; i++) {
+    const a = -Math.PI / 2 + i * Math.PI / 4, rr = i % 2 ? r * k : r;
+    pts.push([rr * Math.cos(a), rr * Math.sin(a)]);
+  }
+  return polyD(pts) + 'Z';
+}
+
+function initDoodles(list, S) {
+  let svg = document.getElementById('doodles');
+  if (!svg) {
+    svg = document.createElementNS(SVGNS, 'svg');
+    svg.id = 'doodles';
+    svg.setAttribute('width', 1080); svg.setAttribute('height', 1920);
+    Object.assign(svg.style, { position: 'absolute', left: 0, top: 0, filter: S.shadow, overflow: 'visible' });
+    document.body.appendChild(svg);
+  }
+  svg.innerHTML = '';
+  DOODLES = list.map(d => {
+    const g = document.createElementNS(SVGNS, 'g');
+    svg.appendChild(g);
+    const color = d.color || S.accent.color, sw = d.stroke || 5;
+    const parts = [];
+    if (d.type === 'sparkle') {
+      for (const [ox, oy, sc] of (d.stars || [[0, 0, 1]])) {
+        const p = document.createElementNS(SVGNS, 'path');
+        p.setAttribute('d', starD((d.size || 26) * sc));
+        p.setAttribute('fill', color);
+        const wrap = document.createElementNS(SVGNS, 'g');
+        wrap.appendChild(p);
+        g.appendChild(wrap);
+        parts.push({ el: wrap, ox: d.x + ox, oy: d.y + oy });
+      }
+    } else {
+      for (const pp of doodlePaths(d)) {
+        const p = document.createElementNS(SVGNS, 'path');
+        p.setAttribute('d', pp.d);
+        const attrs = { fill: 'none', stroke: color, 'stroke-width': sw, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+        for (const k in attrs) p.setAttribute(k, attrs[k]);
+        g.appendChild(p);
+        const len = p.getTotalLength();
+        p.setAttribute('stroke-dasharray', len);
+        parts.push({ el: p, len, share: pp.share });
+      }
+    }
+    return { d, g, parts };
+  });
+}
+
+function seekDoodles(t) {
+  for (const D of DOODLES) {
+    const d = D.d, t1 = (d.t1 ?? 1e9);
+    const on = t >= d.t && t < t1;
+    D.g.style.display = on ? 'inline' : 'none';
+    if (!on) continue;
+    D.g.style.opacity = d.fade ? Math.min(1, Math.max(0, (t1 - t) / d.fade)) : 1;
+    const p = Math.min(1, (t - d.t) / (d.dur || 0.3));
+    if (d.type === 'sparkle') {
+      D.parts.forEach((pt, i) => {
+        const pi = Math.min(1, Math.max(0, (t - d.t - i * 0.07) / (d.dur || 0.25)));
+        const s = kf([[0, 0], [0.55, 1.25], [1, 1]], pi) * (1 + 0.12 * Math.sin((t - d.t) * 14 + i * 2));
+        const rot = (1 - pi) * -60 + (t - d.t) * 25;
+        pt.el.setAttribute('transform', `translate(${pt.ox} ${pt.oy}) rotate(${rot}) scale(${s})`);
+      });
+    } else {
+      let acc = 0;
+      for (const pt of D.parts) {
+        const q = Math.min(1, Math.max(0, (p - acc) / pt.share));
+        const e = 1 - Math.pow(1 - q, 2);
+        pt.el.setAttribute('stroke-dashoffset', pt.len * (1 - e));
+        acc += pt.share;
+      }
+    }
+  }
+}
+
+// keyframe interpolation (smoothstep between keys)
+function kf(keys, p) {
+  if (p <= keys[0][0]) return keys[0][1];
+  for (let i = 1; i < keys.length; i++) {
+    if (p <= keys[i][0]) {
+      const [p0, v0] = keys[i - 1], [p1, v1] = keys[i];
+      let u = (p - p0) / (p1 - p0);
+      u = u * u * (3 - 2 * u);
+      return v0 + (v1 - v0) * u;
+    }
+  }
+  return keys[keys.length - 1][1];
+}
+
+function charTransform(ch, dt, A) {
+  if (ch.anim === 'none') return { o: 1, tr: 'none' };
+  const big = (ch.tok.scale || 1) > 1.5;
+  const D = ch.anim === 'pop' ? A.pop_dur * (big ? 1.25 : 1) : A.dur;
+  const p = dt / D;
+  if (p >= 1) return { o: 1, tr: 'none' };
+  if (ch.anim === 'pop') {
+    const over = big ? 1.28 : 1.12;
+    const s = kf([[0, big ? 0.2 : 0.55], [0.45, over], [0.75, 0.96], [1, 1]], p);
+    const r = big ? kf([[0, -14], [0.45, 4], [1, 0]], p) : 0;
+    return { o: kf([[0, 0], [0.2, 1]], p), tr: `rotate(${r}deg) scale(${s})` };
+  }
+  const boost = ch.kind === 'accent' ? A.accent_boost : 1;
+  const sy = kf([[0, A.from], [0.38, 1 + (A.overshoot - 1) * boost], [0.7, 0.96], [1, 1]], p);
+  const sx = kf([[0, 1.12], [0.38, 0.92], [0.7, 1.02], [1, 1]], p);
+  const sk = kf([[0, A.skew * boost], [0.38, A.skew * 0.6 * boost], [1, 0]], p);
+  return { o: kf([[0, 0.7], [0.2, 1]], p), tr: `skewX(${sk}deg) scale(${sx}, ${sy})` };
+}
+
+function seek(t) {
+  const A = TL.style.anim;
+  for (const B of BLOCKS) {
+    const t1 = Math.min(B.screen.t1, B.blk.until ?? 1e9);
+    const on = t >= B.screen.t0 && t < t1;
+    B.el.style.display = on ? 'block' : 'none';
+    if (!on) continue;
+    const fade = B.blk.fade ?? B.screen.fade ?? 0;
+    B.el.style.opacity = fade ? Math.min(1, (t1 - t) / fade) : 1;
+    for (const ch of B.chars) {
+      const dt = t - ch.start;
+      if (dt < 0) { ch.el.style.visibility = 'hidden'; continue; }
+      ch.el.style.visibility = 'visible';
+      const { o, tr } = charTransform(ch, dt, A);
+      ch.el.style.opacity = o;
+      ch.el.style.transform = tr;
+    }
+  }
+  seekDoodles(t);
+  return true;
+}
+
+// Block sizes for the Python layout solver (blocks rendered at x=y=0 in measure mode).
+function measure() {
+  return BLOCKS.map(B => ({ id: B.blk.id, bbox: B.bbox, x: B.blk.x || 0, y: B.blk.y || 0 }));
+}
+
+function debugBoxes() {
+  for (const B of BLOCKS) {
+    const d = document.createElement('div');
+    d.className = 'debug';
+    Object.assign(d.style, { left: B.bbox.x + 'px', top: B.bbox.y + 'px', width: B.bbox.w + 'px', height: B.bbox.h + 'px' });
+    B.el.parentNode.appendChild(d);
+  }
+}
+</script>
+</body>
+</html>

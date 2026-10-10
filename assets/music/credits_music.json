@@ -1,0 +1,38 @@
+[
+ {
+  "file": "music/music_01_gummies_120bpm_full.wav",
+  "edit": "music/music_01_gummies_120bpm_edit28s_from16.34.wav",
+  "title": "Gummies (Mixkit #1142)",
+  "source_url": "https://assets.mixkit.co/music/1142/1142.mp3",
+  "bpm": 120.0,
+  "tags": "Synthpop, Underscore, Humorous",
+  "license": "Mixkit Stock Music Free License (https://mixkit.co/license/#musicFree): free for commercial use in social media posts & online marketing ads, no attribution required; NOT allowed: TV/radio broadcast, CD/DVD, video games, standalone/remix redistribution, Content-ID registration"
+ },
+ {
+  "file": "music/music_02_one_more_dance_110bpm_full.wav",
+  "edit": "music/music_02_one_more_dance_110bpm_edit28s_from28.37.wav",
+  "title": "One More Dance (Mixkit #288)",
+  "source_url": "https://assets.mixkit.co/music/288/288.mp3",
+  "bpm": 110.0,
+  "tags": "Pop, Dance-Pop, Carefree, Soft",
+  "license": "Mixkit Stock Music Free License (https://mixkit.co/license/#musicFree): free for commercial use in social media posts & online marketing ads, no attribution required; NOT allowed: TV/radio broadcast, CD/DVD, video games, standalone/remix redistribution, Content-ID registration"
+ },
+ {
+  "file": "music/music_03_gimme_that_groove_112bpm_full.wav",
+  "edit": "music/music_03_gimme_that_groove_112bpm_edit28s_from19.30.wav",
+  "title": "Gimme that Groove! (Mixkit #872)",
+  "source_url": "https://assets.mixkit.co/music/872/872.mp3",
+  "bpm": 112.0,
+  "tags": "Funk, Insistent, Melodic, Fashion",
+  "license": "Mixkit Stock Music Free License (https://mixkit.co/license/#musicFree): free for commercial use in social media posts & online marketing ads, no attribution required; NOT allowed: TV/radio broadcast, CD/DVD, video games, standalone/remix redistribution, Content-ID registration"
+ },
+ {
+  "file": "music/music_04_aerobic_fashion_110bpm_full.wav",
+  "edit": "music/music_04_aerobic_fashion_110bpm_edit28s_from17.45.wav",
+  "title": "Aerobic Fashion (Mixkit #327)",
+  "source_url": "https://assets.mixkit.co/music/327/327.mp3",
+  "bpm": 110.0,
+  "tags": "House, Relaxed, Positive, Soft, Fashion",
+  "license": "Mixkit Stock Music Free License (https://mixkit.co/license/#musicFree): free for commercial use in social media posts & online marketing ads, no attribution required; NOT allowed: TV/radio broadcast, CD/DVD, video games, standalone/remix redistribution, Content-ID registration"
+ }
+]

@@ -1,0 +1,508 @@
+{
+ "source": "IMG_2459.MOV",
+ "words": "build/source/words_refined.json",
+ "masks": "build/prep_IMG_2459/masks.npy",
+ "track": "build/source/subject_track.json",
+ "src_duration": 22.467,
+ "takes": [
+  [
+   0,
+   3.9333
+  ],
+  [
+   3.9333,
+   8.0667
+  ],
+  [
+   8.0667,
+   12.6
+  ],
+  [
+   12.6,
+   16.5333
+  ],
+  [
+   16.5333,
+   22.467
+  ]
+ ],
+ "edl": [
+  {
+   "src": [
+    0.2,
+    21.8
+   ]
+  },
+  {
+   "hold": 21.433,
+   "dur": 1.2
+  },
+  {
+   "src": [
+    21.8,
+    22.467
+   ]
+  }
+ ],
+ "style": {
+  "layout": {
+   "exclude": [
+    [
+     960,
+     1050,
+     1080,
+     1920
+    ],
+    [
+     660,
+     140,
+     940,
+     410
+    ]
+   ]
+  }
+ },
+ "screens": [
+  {
+   "take": 1,
+   "blocks": [
+    {
+     "lines": [
+      {
+       "text": "у якому №",
+       "literal": true,
+       "t": 0.0,
+       "scale": 1.25
+      },
+      {
+       "text": "_впізнала себе?_",
+       "literal": true,
+       "t": 0.0,
+       "scale": 1.45
+      }
+     ],
+     "until": 1.62,
+     "fade": 0.2,
+     "behind": false,
+     "place": {
+      "y": 270,
+      "x": 70
+     }
+    },
+    {
+     "lines": [
+      "№1",
+      "ні ну хоче",
+      "_доглянути_ волосся"
+     ]
+    },
+    {
+     "lines": [
+      "// а маску тримати",
+      {
+       "text": "10 хвилин",
+       "indent": 0.9
+      },
+      {
+       "text": "*(довго)*",
+       "align": "right"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "take": 2,
+   "blocks": [
+    {
+     "lines": [
+      "№2",
+      "хоче відростити",
+      "волосся *[до попи]*"
+     ]
+    },
+    {
+     "lines": [
+      "// а пінку",
+      "*(забуває)* наносити"
+     ]
+    }
+   ]
+  },
+  {
+   "take": 3,
+   "blocks": [
+    {
+     "lines": [
+      "№3",
+      "хоче зберегти колір",
+      "_фарбованого_ волосся"
+     ]
+    },
+    {
+     "lines": [
+      "// а шампунь обирає",
+      {
+       "text": "*(будь-який)*",
+       "align": "right"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "take": 4,
+   "blocks": [
+    {
+     "lines": [
+      "№4",
+      "хоче _ідеальну укладку_"
+     ]
+    },
+    {
+     "lines": [
+      "// а _термозахист_"
+     ]
+    },
+    {
+     "lines": [
+      {
+       "text": "*ой*",
+       "anim": "pop",
+       "scale": 3
+      }
+     ],
+     "until": 15.7,
+     "behind": false,
+     "place": {
+      "x": 190,
+      "y": 560,
+      "margin": 18
+     }
+    },
+    {
+     "lines": [
+      "сьогодні *(забула)*"
+     ]
+    }
+   ]
+  },
+  {
+   "take": 5,
+   "blocks": [
+    {
+     "lines": [
+      "№5",
+      "хоче доглянути волосся",
+      "_як після салону_"
+     ]
+    },
+    {
+     "lines": [
+      "// а дома з засобів",
+      "тільки"
+     ],
+     "until": 20.36,
+     "fade": 0
+    },
+    {
+     "lines": [
+      {
+       "text": "*[шампунь*",
+       "scale": 1.55
+      },
+      {
+       "text": "*і надія]*",
+       "scale": 1.55,
+       "align": "right"
+      }
+     ],
+     "leading": 0.64,
+     "until": 22.8,
+     "fade": 0.25,
+     "behind": false,
+     "place": {
+      "y": 300,
+      "free_until": 22.8
+     }
+    }
+   ],
+   "t1_override": 22.8,
+   "fade": 0.25
+  }
+ ],
+ "doodles": [
+  {
+   "type": "circle",
+   "t": 21.7,
+   "dur": 0.35,
+   "t1": 22.8,
+   "fade": 0.2,
+   "x": 120,
+   "y": 790,
+   "w": 470,
+   "h": 500,
+   "stroke": 6
+  },
+  {
+   "type": "sparkle",
+   "t": 21.66,
+   "dur": 0.3,
+   "t1": 22.8,
+   "fade": 0.2,
+   "x": 600,
+   "y": 820,
+   "size": 30,
+   "stars": [
+    [
+     0,
+     0,
+     1
+    ],
+    [
+     46,
+     52,
+     0.55
+    ],
+    [
+     -30,
+     70,
+     0.4
+    ]
+   ]
+  }
+ ],
+ "camera": {
+  "push": {
+   "from": 1.0,
+   "to": 1.04
+  },
+  "push_takes": {
+   "5": {
+    "from": 1.0,
+    "to": 1.0
+   }
+  },
+  "cut_in": {
+   "scale": 1.06,
+   "dur": 0.25,
+   "blur": 0.04
+  },
+  "freezes": [
+   {
+    "t0": 14.44,
+    "t1": 14.75
+   }
+  ],
+  "punches": [
+   {
+    "t": 5.22,
+    "scale": 1.06,
+    "in": 0.08,
+    "until": 5.62,
+    "out": 0.12,
+    "target": "face"
+   },
+   {
+    "t": 6.3,
+    "scale": 1.05,
+    "in": 0.1,
+    "until": 7.8667,
+    "target": "face"
+   },
+   {
+    "t": 11.4,
+    "scale": 1.07,
+    "in": 0.08,
+    "until": 12.4,
+    "target": "face"
+   },
+   {
+    "t": 14.44,
+    "scale": 1.05,
+    "in": 0.31,
+    "ease": "inout",
+    "until": 16.3333,
+    "target": "face"
+   },
+   {
+    "t": 14.75,
+    "scale": 1.07,
+    "in": 0.06,
+    "until": 16.3333,
+    "target": "face"
+   }
+  ],
+  "shakes": [
+   {
+    "t": 14.75,
+    "dur": 0.38,
+    "amp": 11,
+    "rot": 0.6,
+    "freq": 16
+   }
+  ],
+  "flashes": [
+   {
+    "t": 21.6,
+    "dur": 0.14,
+    "amount": 0.9
+   }
+  ],
+  "gains": {
+   "1": [
+    1,
+    1,
+    1
+   ],
+   "2": [
+    0.94,
+    1,
+    1.08
+   ],
+   "3": [
+    1,
+    1,
+    1
+   ],
+   "4": [
+    0.94,
+    1,
+    1.08
+   ],
+   "5": [
+    1.065,
+    1,
+    0.93
+   ]
+  }
+ },
+ "grade": {
+  "lift": 0.01,
+  "contrast": 1.04,
+  "saturation": 1.04,
+  "vignette": 0.1,
+  "gamma": 1.0
+ },
+ "audio": {
+  "voice": {
+   "gain_db": 0,
+   "process": false
+  },
+  "music": {
+   "file": "music_01_gummies_120bpm_full.wav",
+   "gain_db": -17,
+   "offset": 16.34,
+   "fade_in": 0,
+   "fade_out": 0,
+   "dropouts": [
+    [
+     14.44,
+     14.75
+    ]
+   ]
+  },
+  "sfx": [
+   {
+    "name": "whoosh_soft_01_air_sweep",
+    "peak_at": 3.7333,
+    "gain_db": -11
+   },
+   {
+    "name": "whoosh_soft_01_air_sweep",
+    "peak_at": 7.8667,
+    "gain_db": -11
+   },
+   {
+    "name": "whoosh_soft_01_air_sweep",
+    "peak_at": 12.4,
+    "gain_db": -11
+   },
+   {
+    "name": "whoosh_soft_01_air_sweep",
+    "peak_at": 16.3333,
+    "gain_db": -11
+   },
+   {
+    "name": "boing_01_spring",
+    "peak_at": 5.27,
+    "gain_db": -16
+   },
+   {
+    "name": "punch_soft_impact",
+    "peak_at": 11.42,
+    "gain_db": -13
+   },
+   {
+    "name": "record_scratch_01",
+    "peak_at": 14.52,
+    "gain_db": -9
+   },
+   {
+    "name": "bass_thump_02_synth",
+    "peak_at": 14.75,
+    "gain_db": -9
+   },
+   {
+    "name": "pop_04_light",
+    "peak_at": 14.76,
+    "gain_db": -16
+   },
+   {
+    "name": "ding_02_soft_chime",
+    "peak_at": 18.08,
+    "gain_db": -20
+   },
+   {
+    "name": "camera_shutter_01",
+    "peak_at": 21.6,
+    "gain_db": -8
+   },
+   {
+    "name": "sparkle_hit_fairy",
+    "peak_at": 21.66,
+    "gain_db": -11
+   },
+   {
+    "name": "shimmer_sparkle_whoosh",
+    "peak_at": 21.85,
+    "gain_db": -17
+   },
+   {
+    "name": "whoosh_quick_03_swish",
+    "peak_at": 22.8,
+    "gain_db": -15
+   },
+   {
+    "name": "pop_04_light",
+    "peak_at": 3.12,
+    "gain_db": -23
+   },
+   {
+    "name": "pop_04_light",
+    "peak_at": 5.055,
+    "gain_db": -23
+   },
+   {
+    "name": "pop_04_light",
+    "peak_at": 6.3,
+    "gain_db": -23
+   },
+   {
+    "name": "pop_04_light",
+    "peak_at": 11.4,
+    "gain_db": -23
+   },
+   {
+    "name": "pop_04_light",
+    "peak_at": 15.47,
+    "gain_db": -23
+   },
+   {
+    "name": "pop_04_light",
+    "peak_at": 20.38,
+    "gain_db": -23
+   }
+  ]
+ }
+}

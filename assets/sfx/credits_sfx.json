@@ -1,0 +1,299 @@
+[
+ {
+  "file": "sfx/whoosh_soft_01_air_sweep.wav",
+  "duration_s": 0.676,
+  "t_peak_s": 0.322,
+  "use_for": "transition between takes (main); peak ~0.32s - place peak on the cut",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2637/2637.wav",
+  "source_title": "Mixkit #2637 \"Fast air transition sweep\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/whoosh_soft_02_wind_swoosh.wav",
+  "duration_s": 0.7,
+  "t_peak_s": 0.202,
+  "use_for": "transition between takes (softer, airy); peak ~0.20s",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/1471/1471.wav",
+  "source_title": "Mixkit #1471 \"Cinematic wind swoosh\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/whoosh_quick_03_swish.wav",
+  "duration_s": 0.344,
+  "t_peak_s": 0.082,
+  "use_for": "very short swish (0.34s) for quick cuts / text slide-ins; peak ~0.08s",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/3115/3115.wav",
+  "source_title": "Mixkit #3115 \"Fast transitions swoosh\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/whoosh_04_air_into_cut.wav",
+  "duration_s": 0.798,
+  "t_peak_s": 0.47,
+  "use_for": "rising whoosh that ends abruptly at ~0.58s - put the end on the cut",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2607/2607.wav",
+  "source_title": "Mixkit #2607 \"Fast air woosh\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/whoosh_05_swipe_zoom.wav",
+  "duration_s": 0.73,
+  "t_peak_s": 0.221,
+  "use_for": "tonal upward swipe - punch-in zoom or whip-pan; peak ~0.22s",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2627/2627.wav",
+  "source_title": "Mixkit #2627 \"Fast swipe zoom\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/whoosh_06_synth.wav",
+  "duration_s": 0.458,
+  "t_peak_s": 0.274,
+  "use_for": "neutral backup transition whoosh; peak ~0.27s",
+  "source_url": "local: analysis/sfx/synth.py whoosh()",
+  "source_title": "band-passed noise sweep L->R",
+  "license": "self-synthesized (numpy) - no restrictions"
+ },
+ {
+  "file": "sfx/pop_01_blip.wav",
+  "duration_s": 0.089,
+  "t_peak_s": 0.009,
+  "use_for": "subtitle word pop (main) - very short, use at -18..-24 dB under voice",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/3069/3069.wav",
+  "source_title": "Mixkit #3069 \"Game balloon or bubble pop\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/pop_02_bubble_a.wav",
+  "duration_s": 0.103,
+  "t_peak_s": 0.015,
+  "use_for": "subtitle word pop variant (rising bloop)",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2925/2925.wav",
+  "source_title": "Mixkit #2925 \"Soap bubble sound (1st pop)\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/pop_03_bubble_b.wav",
+  "duration_s": 0.108,
+  "t_peak_s": 0.014,
+  "use_for": "subtitle word pop variant (rising bloop)",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2925/2925.wav",
+  "source_title": "Mixkit #2925 \"Soap bubble sound (2nd pop)\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/pop_04_light.wav",
+  "duration_s": 0.171,
+  "t_peak_s": 0.025,
+  "use_for": "accent-word pop (pink words) / sticker pop-in",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/3005/3005.wav",
+  "source_title": "Mixkit #3005 \"Explainer video pops whoosh light pop\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/pop_05_mouth.wav",
+  "duration_s": 0.326,
+  "t_peak_s": 0.004,
+  "use_for": "mouth-pop style accent",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2364/2364.wav",
+  "source_title": "Mixkit #2364 \"Hard pop click\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/pop_06_synth.wav",
+  "duration_s": 0.07,
+  "t_peak_s": 0.002,
+  "use_for": "clean neutral word pop backup",
+  "source_url": "local: analysis/sfx/synth.py pop()",
+  "source_title": "chirped sine pop",
+  "license": "self-synthesized (numpy) - no restrictions"
+ },
+ {
+  "file": "sfx/click_01_tick.wav",
+  "duration_s": 0.05,
+  "t_peak_s": 0.007,
+  "use_for": "tiny tick for word-by-word captions or UI",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/1124/1124.wav",
+  "source_title": "Mixkit #1124 \"Plastic bubble click\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/camera_shutter_01.wav",
+  "duration_s": 0.256,
+  "t_peak_s": 0.112,
+  "use_for": "camera shutter / freeze-frame",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/1133/1133.wav",
+  "source_title": "Mixkit #1133 \"Camera shutter click\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/camera_shutter_02_digital.wav",
+  "duration_s": 0.105,
+  "t_peak_s": 0.051,
+  "use_for": "short digital shutter click",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/1432/1432.wav",
+  "source_title": "Mixkit #1432 \"Camera digital shutter\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/boing_01_spring.wav",
+  "duration_s": 1.139,
+  "t_peak_s": 0.107,
+  "use_for": "cartoon accent for \"oj, sohodni zabula\"",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2894/2894.wav",
+  "source_title": "Mixkit #2894 \"Boing hit sound\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/boing_02_metallic.wav",
+  "duration_s": 0.584,
+  "t_peak_s": 0.055,
+  "use_for": "shorter boing alternative",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2895/2895.wav",
+  "source_title": "Mixkit #2895 \"Metallic boing hit\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/cartoon_slide_whistle_up.wav",
+  "duration_s": 0.331,
+  "t_peak_s": 0.052,
+  "use_for": "quick upward slide whistle - comedic accent",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2888/2888.wav",
+  "source_title": "Mixkit #2888 \"Funny video game slide\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/cartoon_fail_piano.wav",
+  "duration_s": 2.063,
+  "t_peak_s": 0.104,
+  "use_for": "descending \"fail\" piano (2s) - optional, a bit cartoonish",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/473/473.wav",
+  "source_title": "Mixkit #473 \"Cartoon failure piano\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/record_scratch_01.wav",
+  "duration_s": 0.472,
+  "t_peak_s": 0.188,
+  "use_for": "record-scratch stop for \"oj, sohodni zabula\" (freeze moment)",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/709/709.wav",
+  "source_title": "Mixkit #709 \"Swell vinyl record scratch\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/record_scratch_02_wikka.wav",
+  "duration_s": 0.911,
+  "t_peak_s": 0.228,
+  "use_for": "DJ wikka scratch alternative",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/703/703.wav",
+  "source_title": "Mixkit #703 \"Vinyl forward and back fast scratch\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/sparkle_riser_reveal.wav",
+  "duration_s": 2.65,
+  "t_peak_s": 0.901,
+  "use_for": "TOSUMI bag reveal: rises and hits at ~0.90s - start it 0.9s before the reveal",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2633/2633.wav",
+  "source_title": "Mixkit #2633 \"Sweeping sparkle presentation intro\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/sparkle_hit_fairy.wav",
+  "duration_s": 0.998,
+  "t_peak_s": 0.039,
+  "use_for": "sparkle ding right on the bag reveal",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/871/871.wav",
+  "source_title": "Mixkit #871 \"Fairy magic sparkle\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/sparkle_poof_hit.wav",
+  "duration_s": 2.161,
+  "t_peak_s": 0.024,
+  "use_for": "instant sparkle hit with shimmer tail",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/3082/3082.wav",
+  "source_title": "Mixkit #3082 \"Magic sparkle poof hit\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/shimmer_sparkle_whoosh.wav",
+  "duration_s": 2.47,
+  "t_peak_s": 0.453,
+  "use_for": "shimmer bed under end card / logo",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2350/2350.wav",
+  "source_title": "Mixkit #2350 \"Magic sparkle whoosh\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/ding_01_achievement_bell.wav",
+  "duration_s": 1.468,
+  "t_peak_s": 0.114,
+  "use_for": "clean ding (product appears / tip)",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/600/600.wav",
+  "source_title": "Mixkit #600 \"Achievement bell\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/ding_02_soft_chime.wav",
+  "duration_s": 1.621,
+  "t_peak_s": 0.102,
+  "use_for": "softer chime",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/3109/3109.wav",
+  "source_title": "Mixkit #3109 \"Relaxing bell chime\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/cha_ching_register.wav",
+  "duration_s": 2.187,
+  "t_peak_s": 0.057,
+  "use_for": "cha-ching (drawer + bell) for the sale/price moment",
+  "source_url": "https://freesound.org/people/Zott820/sounds/209578/ (HQ preview https://cdn.freesound.org/previews/209/209578_2558531-hq.mp3)",
+  "source_title": "Freesound #209578 \"Cash Register Purchase\" by Zott820",
+  "license": "CC0 1.0 Public Domain (Freesound, https://creativecommons.org/publicdomain/zero/1.0/) - no attribution required"
+ },
+ {
+  "file": "sfx/tada_brass.wav",
+  "duration_s": 3.2,
+  "t_peak_s": 0.285,
+  "use_for": "ta-da brass chord (2s + tail, capped 3.2s)",
+  "source_url": "https://freesound.org/people/jimhancock/sounds/376318/ (HQ preview https://cdn.freesound.org/previews/376/376318_375016-hq.mp3)",
+  "source_title": "Freesound #376318 \"TaDa!.wav\" by jimhancock",
+  "license": "CC0 1.0 Public Domain (Freesound, https://creativecommons.org/publicdomain/zero/1.0/) - no attribution required"
+ },
+ {
+  "file": "sfx/reveal_musical_plucks.wav",
+  "duration_s": 2.046,
+  "t_peak_s": 0.509,
+  "use_for": "playful 4-note reveal (alternative to ta-da)",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/961/961.wav",
+  "source_title": "Mixkit #961 \"Musical reveal\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/bass_thump_01_sub.wav",
+  "duration_s": 0.943,
+  "t_peak_s": 0.032,
+  "use_for": "sub thump for punch-in zoom (pure ~50 Hz, weak on phone speakers)",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2299/2299.wav",
+  "source_title": "Mixkit #2299 \"Short bass hit\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ },
+ {
+  "file": "sfx/bass_thump_02_synth.wav",
+  "duration_s": 0.42,
+  "t_peak_s": 0.001,
+  "use_for": "punch-in zoom thump, audible on phone speakers",
+  "source_url": "local: analysis/sfx/synth.py thump()",
+  "source_title": "saturated pitch-drop kick + knock",
+  "license": "self-synthesized (numpy) - no restrictions"
+ },
+ {
+  "file": "sfx/punch_soft_impact.wav",
+  "duration_s": 0.44,
+  "t_peak_s": 0.052,
+  "use_for": "soft mid punch for zoom / text slam",
+  "source_url": "https://assets.mixkit.co/active_storage/sfx/2148/2148.wav",
+  "source_title": "Mixkit #2148 \"Weak hit impact\"",
+  "license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree) - commercial use incl. social media ads, no attribution required; do not redistribute standalone"
+ }
+]

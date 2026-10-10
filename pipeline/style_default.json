@@ -1,0 +1,60 @@
+{
+  "main": {
+    "family": "Main",
+    "weight": 380,
+    "size": 58,
+    "tracking": -0.04,
+    "color": "#FFFFFF"
+  },
+  "accent": {
+    "family": "Accent",
+    "weight": 520,
+    "scale": 1.0,
+    "tracking": -0.02,
+    "color": "#FF3D96",
+    "outline": "0 0 1px rgba(70,0,30,.85), 0 0 1px rgba(70,0,30,.85)"
+  },
+  "label": {
+    "family": "Serif",
+    "weight": 400,
+    "scale": 0.8,
+    "tracking": 0.0,
+    "color": "#FF3D96"
+  },
+  "leading": 0.62,
+  "shadow": "drop-shadow(0 0 0.8px rgba(0,0,0,.75)) drop-shadow(0 1px 2px rgba(0,0,0,.3)) drop-shadow(0 2px 8px rgba(0,0,0,.18))",
+  "anim": {
+    "kind": "type",
+    "cps": 40,
+    "dur": 0.13,
+    "from": 0.12,
+    "overshoot": 1.32,
+    "skew": -10,
+    "accent_boost": 1.15,
+    "pop_dur": 0.2
+  },
+  "layout": {
+    "safe": [
+      56,
+      250,
+      1024,
+      1480
+    ],
+    "exclude": [
+      [
+        960,
+        1050,
+        1080,
+        1920
+      ]
+    ],
+    "margin": 44,
+    "gap": 70,
+    "prefer_side": "left",
+    "behind": true,
+    "read_time": 0.9,
+    "left_snap": 0.5
+  },
+  "word_space": -0.07,
+  "accent_gap_after": 0.2
+}

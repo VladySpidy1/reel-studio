@@ -1,0 +1,258 @@
+{
+ "source": "VIDEO.MOV",
+ "words": "build/prep_NAME/words.json",
+ "masks": "build/prep_NAME/masks.npy",
+ "track": "build/prep_NAME/track.json",
+ "src_duration": 0.0,
+ "takes": [
+  [
+   0.0,
+   0.0
+  ]
+ ],
+ "edl": [
+  {
+   "src": [
+    0.15,
+    0.0
+   ]
+  },
+  {
+   "hold": 0.0,
+   "dur": 1.2
+  },
+  {
+   "src": [
+    0.0,
+    0.0
+   ]
+  }
+ ],
+ "style": {
+  "layout": {
+   "exclude": [
+    [
+     960,
+     1050,
+     1080,
+     1920
+    ]
+   ]
+  }
+ },
+ "screens": [
+  {
+   "take": 1,
+   "blocks": [
+    {
+     "lines": [
+      {
+       "text": "у якому №",
+       "literal": true,
+       "t": 0.0,
+       "scale": 1.25
+      },
+      {
+       "text": "_впізнала себе?_",
+       "literal": true,
+       "t": 0.0,
+       "scale": 1.45
+      }
+     ],
+     "until": 1.6,
+     "fade": 0.2,
+     "behind": false,
+     "place": {
+      "y": 270,
+      "x": 70
+     }
+    },
+    {
+     "lines": [
+      "№1",
+      "хоче зробити щось",
+      "_гарне_"
+     ]
+    },
+    {
+     "lines": [
+      "// а насправді",
+      "*(провал)*"
+     ]
+    }
+   ]
+  },
+  {
+   "take": 2,
+   "blocks": [
+    {
+     "lines": [
+      "№2",
+      "..."
+     ]
+    },
+    {
+     "lines": [
+      {
+       "text": "*ой*",
+       "anim": "pop",
+       "scale": 3
+      }
+     ],
+     "until": 0.0,
+     "behind": false,
+     "place": {
+      "x": 190,
+      "y": 560
+     }
+    },
+    {
+     "lines": [
+      {
+       "text": "*(фінальний*",
+       "scale": 1.55
+      },
+      {
+       "text": "*панчлайн)*",
+       "scale": 1.55
+      }
+     ],
+     "leading": 0.86,
+     "until": 0.0,
+     "fade": 0.25,
+     "behind": false,
+     "place": {
+      "y": 300,
+      "free_until": 0.0
+     }
+    }
+   ],
+   "t1_override": 0.0,
+   "fade": 0.25
+  }
+ ],
+ "doodles": [
+  {
+   "type": "circle",
+   "t": 0.0,
+   "dur": 0.35,
+   "t1": 0.0,
+   "fade": 0.2,
+   "x": 0,
+   "y": 0,
+   "w": 400,
+   "h": 450,
+   "stroke": 6
+  },
+  {
+   "type": "sparkle",
+   "t": 0.0,
+   "dur": 0.3,
+   "t1": 0.0,
+   "fade": 0.2,
+   "x": 0,
+   "y": 0,
+   "size": 30,
+   "stars": [
+    [
+     0,
+     0,
+     1
+    ],
+    [
+     46,
+     52,
+     0.55
+    ],
+    [
+     -30,
+     70,
+     0.4
+    ]
+   ]
+  }
+ ],
+ "camera": {
+  "push": {
+   "from": 1.0,
+   "to": 1.04
+  },
+  "push_takes": {
+   "LAST_TAKE": {
+    "from": 1.0,
+    "to": 1.0
+   }
+  },
+  "cut_in": {
+   "scale": 1.06,
+   "dur": 0.25,
+   "blur": 0.04
+  },
+  "freezes": [],
+  "punches": [
+   {
+    "t": 0.0,
+    "scale": 1.06,
+    "in": 0.08,
+    "until": 0.0,
+    "target": "face"
+   }
+  ],
+  "shakes": [],
+  "flashes": [
+   {
+    "t": 0.0,
+    "dur": 0.14,
+    "amount": 0.9
+   }
+  ],
+  "gains": {}
+ },
+ "grade": {
+  "lift": 0.01,
+  "contrast": 1.04,
+  "saturation": 1.04,
+  "vignette": 0.1
+ },
+ "audio": {
+  "voice": {
+   "gain_db": 0,
+   "process": false
+  },
+  "music": {
+   "file": "music_01_gummies_120bpm_full.wav",
+   "gain_db": -17,
+   "offset": 16.34,
+   "fade_in": 0,
+   "fade_out": 0,
+   "dropouts": []
+  },
+  "sfx": [
+   {
+    "name": "whoosh_soft_01_air_sweep",
+    "peak_at": 0.0,
+    "gain_db": -11
+   },
+   {
+    "name": "pop_04_light",
+    "peak_at": 0.0,
+    "gain_db": -23
+   },
+   {
+    "name": "camera_shutter_01",
+    "peak_at": 0.0,
+    "gain_db": -8
+   },
+   {
+    "name": "sparkle_hit_fairy",
+    "peak_at": 0.0,
+    "gain_db": -11
+   },
+   {
+    "name": "shimmer_sparkle_whoosh",
+    "peak_at": 0.0,
+    "gain_db": -17
+   }
+  ]
+ }
+}
