@@ -1,6 +1,7 @@
 # Direct dependencies; pipeline/requirements.lock.txt pins the tested set (setup_mac.sh installs that).
 numpy<2
 opencv-python>=4.7
+pillow>=10                # inserts: EXIF orientation, ICC profiles to sRGB (LittleCMS), WebP
 faster-whisper>=1.2       # speech is passed as samples, so its PyAV decoder is not used
 ctranslate2>=4.8.1        # fixes a crash in word-timestamp alignment
 onnxruntime>=1.17         # Silero VAD (speech chunks)
