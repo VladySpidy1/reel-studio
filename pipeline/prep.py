@@ -1,10 +1,12 @@
 """Prepare a new source video for the reel pipeline (run once per video).
 
 python prep.py <video> <out_dir> [--lang uk] [--skip-words] [--skip-masks] [--matte resnet50|mobilenetv3]
-               [--compute-type auto|int8|float32]
+               [--compute-type auto|int8|float32] [--verbose]
 
 <video> is a 1080x1920 30 fps file, normally the source.ffconcat written by ingest.py. When clips.json
 lies next to it, the clip boundaries are the cuts (no detection) and every clip is transcribed on its own.
+The terminal gets a short summary (one line per stage); the full output, transcript included, is in
+<out_dir>/logs/prep.log, and on the terminal too with --verbose. Holds the studio lock (one heavy job at a time).
 
 Writes to out_dir:
   words.json   faster-whisper large-v3 word timings  {"segments": [{"words": [{"w","s","e","p"}]}]}
@@ -16,14 +18,14 @@ Writes to out_dir:
 """
 import argparse
 import json
-import os
 import subprocess
+import time
 from pathlib import Path
 
 import cv2
 import numpy as np
 
-from common import FPS, H, W, load_json, torch_device
+from common import FPS, H, W, keep_awake, load_json, low_ram, run_log, short, studio_lock, torch_device
 
 
 def probe(video):
@@ -240,10 +242,18 @@ def main():
     ap.add_argument("--matte", default="resnet50", choices=["resnet50", "mobilenetv3"])
     ap.add_argument("--compute-type", default="auto", choices=["auto", "int8", "int8_float32", "float32"],
                     help="whisper precision; auto = float32 with 16 GB RAM or more (6 GB of weights), else int8")
+    ap.add_argument("--verbose", action="store_true", help="the full output on the terminal (it is always in the log)")
     a = ap.parse_args()
+    with studio_lock("prep " + a.out):
+        keep_awake()
+        with run_log(Path(a.out) / "logs" / "prep.log", a.verbose):
+            prep(a)
+
+
+def prep(a):
+    T = time.time()
     if a.compute_type == "auto":
-        ram = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
-        a.compute_type = "float32" if ram >= 15e9 else "int8"
+        a.compute_type = "int8" if low_ram() else "float32"
     video, out = Path(a.video), Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     clips_json = video.parent / "clips.json"         # written by ingest.py next to its source.ffconcat
@@ -257,9 +267,12 @@ def main():
     cuts = clip_cuts(clips, dur) if clips else detect_cuts(video, n, dur)
     (out / "cuts.json").write_text(json.dumps(cuts, indent=1), encoding="utf-8")
     print("cuts:", cuts["cuts"])
+    print(f"[cuts] {time.time() - T:.1f}s -> {short(out / 'cuts.json')}: {n} frames, {dur:.3f}s, "
+          f"{len(cuts['takes'])} takes", flush=True)
     if not a.skip_words:
         transcribe(video, out, a.lang, cuts["cuts"], compute_type=a.compute_type,
                    clips=[(video.parent / c["file"], c["offset"]) for c in clips] if clips else None)
+        print(f"[words] {time.time() - T:.1f}s -> {short(out / 'words.json')}", flush=True)
     if not a.skip_masks:
         masks = matte(video, cuts["cuts"], n, a.matte)
         np.save(out / "masks.npy", masks)
@@ -268,6 +281,7 @@ def main():
         import motion                       # gesture events for transitions (sweeps, objects to the lens)
         ev = motion.events(motion.measure(video, masks, cuts["cuts"]))
         (out / "motion.json").write_text(json.dumps({"events": ev}, indent=1), encoding="utf-8")
+        print(f"[masks] {time.time() - T:.1f}s -> {short(out / 'masks.npy')}, track.json, motion.json", flush=True)
     print("done ->", out)
 
 

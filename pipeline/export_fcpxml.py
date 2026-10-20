@@ -1,8 +1,11 @@
 """Editable project: FCPXML timeline + per-element media for finishing in DaVinci Resolve / Final Cut Pro.
 
-python export_fcpxml.py ../projects/<name>/script.json [--name out] [--freeze baked|png|timemap]
+python export_fcpxml.py ../projects/<name>/script.json [--name out] [--freeze baked|png|timemap] [--procs N]
+                         [--verbose] [--force]
 
-Run after build.py (it reads build/meta.json, camera.json, timeline.json and the audio mix). Writes
+Run after build.py (it reads build/meta.json, camera.json, timeline.json and the audio mix); it refuses (exit 2)
+while the build slot holds another reel (--force: developer only). The terminal gets a short summary; the full output
+is in build/<reel>/logs/export_<name>.log. Writes
 output/<name>_project/<name>.fcpxml plus media/ (self-contained: source clips, SFX and music are hard-linked in):
   - the picture: the source clips cut like the reel (spine), product holds as freeze clips;
     camera zooms / punch-ins / shakes as transform keyframes on every clip
@@ -26,6 +29,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.parse
 from fractions import Fraction
 from multiprocessing import Pool
@@ -38,7 +42,8 @@ import numpy as np
 import build
 import camera as cam_mod
 import video_pass
-from common import BUILD, FPS, H, OUT, PIPE, ROOT, W, load_json, source_path
+from common import (BUILD, FPS, H, OUT, PIPE, ROOT, W, default_procs, keep_awake, load_json, reel_id, require_slot,
+                    run_log, short, source_path, studio_lock)
 from edl import EDL
 
 POS_UNIT = H / 100.0       # FCPXML transform position: percent of the frame height, y up
@@ -257,11 +262,22 @@ def main():
     ap.add_argument("script")
     ap.add_argument("--name", default="")
     ap.add_argument("--freeze", default="baked", choices=["baked", "png", "timemap"])
-    ap.add_argument("--procs", type=int, default=4)
+    ap.add_argument("--procs", type=int, default=default_procs(), help="render processes (default: 2 on 8 GB RAM, else 4)")
     ap.add_argument("--skip-layers", action="store_true", help="reuse rendered block/doodle clips")
+    ap.add_argument("--force", action="store_true", help="developer only: export although build/ holds another reel")
+    ap.add_argument("--verbose", action="store_true", help="the full output on the terminal (it is always in the log)")
     a = ap.parse_args()
+    name = a.name or reel_id(a.script)
+    with studio_lock("export " + name):
+        keep_awake()
+        require_slot(a.script, force=a.force)          # before anything is written: build/ must hold this script
+        with run_log(BUILD / reel_id(a.script) / "logs" / f"export_{name}.log", a.verbose):
+            export(a, name)
+
+
+def export(a, name):
+    T = time.time()
     script = load_json(a.script)
-    name = a.name or Path(a.script).parent.name
     proj = OUT / f"{name}_project"
     media = proj / "media"
     media.mkdir(parents=True, exist_ok=True)
@@ -626,7 +642,7 @@ def main():
     out = proj / f"{name}.fcpxml" if a.freeze == "baked" else proj / f"{name}_{a.freeze}.fcpxml"
     out.write_text(xml, encoding="utf-8")
     n_text = sum(1 for c in connected if c["cat"] == "text")
-    print(f"{out}: {len(spine)} spine clips, {n_text} text clips, "
+    print(f"[export] {time.time() - T:.1f}s -> {short(out)}: {len(spine)} spine clips, {n_text} text clips, "
           f"{sum(1 for c in connected if c['cat'] == 'doodle')} doodles, {sum(1 for c in connected if c['cat'] == 'freeze')} freezes, "
           f"{sum(1 for c in connected if c['cat'] == 'flash')} flashes, {len(audio_items)} audio clips")
 

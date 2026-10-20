@@ -15,6 +15,8 @@ import subprocess
 
 import numpy as np
 
+import common  # noqa: F401  (puts ffmpeg on PATH; make_script.py imports beats on its own)
+
 SR = 22050
 HOP = 256
 

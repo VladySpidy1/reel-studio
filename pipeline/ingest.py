@@ -5,7 +5,7 @@ python ingest.py <out_dir> <clip> [<clip> ...]
 Every clip becomes a 1080x1920 30 fps CFR ProRes 422 HQ file with 48 kHz PCM audio of exactly the same
 length as the picture, so all later steps (prep, render, editable-project export) read identical frames.
 Rotation from the phone's display matrix is applied, the picture is scaled to cover 1080x1920 and
-centre-cropped, variable frame rate is resampled to 30 fps.
+centre-cropped, variable frame rate is resampled to 30 fps. Holds the studio lock (one heavy job at a time).
 
 Writes to out_dir:
   media/<clip>.mov   intermediate media, one per clip
@@ -19,7 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from common import FPS, H, W, save_json
+from common import FPS, H, W, keep_awake, save_json, studio_lock
 
 HDR_TRC = {"arib-std-b67", "smpte2084"}
 
@@ -121,4 +121,6 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    with studio_lock("ingest " + " ".join(sys.argv[1:2])):
+        keep_awake()
+        sys.exit(main())

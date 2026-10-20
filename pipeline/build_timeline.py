@@ -268,6 +268,7 @@ def measure(timeline):
 
 def main(script_path):
     script_path = Path(script_path)
+    (ROOT / "build" / "meta.json").unlink(missing_ok=True)      # the slot stamp is written last: a crash leaves none
     script = load_json(script_path)
     style = load_json(PIPE / "style_default.json")
     for k, v in script.get("style", {}).items():
@@ -301,8 +302,10 @@ def main(script_path):
     camera = cam.build(cam_spec, takes, n_frames, track, edl, n_src)
     build_dir = ROOT / "build"
     save_json(camera, build_dir / "camera.json")
-    save_json({"duration": duration, "n_frames": n_frames, "src_duration": src_dur, "edl": edl.segs,
-               "takes": takes, "words": [{"w": w["w"], "s": w["s"]} for w in words]}, build_dir / "meta.json")
+    meta = {"duration": duration, "n_frames": n_frames, "src_duration": src_dur, "edl": edl.segs,
+            "takes": takes, "words": [{"w": w["w"], "s": w["s"]} for w in words],
+            "script": str(script_path.resolve()), "brand": None, "format": None, "renders": [],
+            "checks": {"fail": [], "warn": [], "applied": []}}
 
     # pass 1: measure blocks at origin
     ids = 0
@@ -358,9 +361,21 @@ def main(script_path):
                    for f in range(int(sc["t0"] * FPS), int(np.ceil(sc["t1"] * FPS)))})
     timeline["occlude_frames"] = occl
     save_json(timeline, build_dir / "timeline.json")
+    save_json(meta, build_dir / "meta.json")
     sys.stdout.reconfigure(encoding="utf-8")
     print("\n".join(report))
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    import argparse
+    import time
+    from common import BUILD, reel_id, run_log, short, studio_lock
+    ap = argparse.ArgumentParser()
+    ap.add_argument("script")
+    ap.add_argument("--verbose", action="store_true", help="the full output on the terminal (it is always in the log)")
+    a = ap.parse_args()
+    with studio_lock("timeline " + reel_id(a.script)), \
+            run_log(BUILD / reel_id(a.script) / "logs" / "timeline.log", a.verbose):
+        T = time.time()
+        main(a.script)
+        print(f"[timeline] {time.time() - T:.1f}s -> {short(BUILD / 'timeline.json')}")

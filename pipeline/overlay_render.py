@@ -9,7 +9,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from common import BUILD, FPS, H, PIPE, W, load_json
+from common import BUILD, FPS, H, PIPE, W, default_procs, load_json
 
 HTML = PIPE / "overlay.html"
 
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     ap.add_argument("--out", default=str(BUILD / "overlay"))
     ap.add_argument("--frames", type=int, required=True)
     ap.add_argument("--only", default="", help="comma separated frame indices (preview)")
-    ap.add_argument("--procs", type=int, default=4)
+    ap.add_argument("--procs", type=int, default=default_procs(), help="default: 2 on 8 GB RAM, else 4")
     a = ap.parse_args()
     only = [int(x) for x in a.only.split(",")] if a.only else None
     render(a.frames, a.out, a.timeline, a.procs, only)
