@@ -22,6 +22,8 @@ import numpy as np
 from playwright.sync_api import sync_playwright
 
 import camera as cam
+import fontcheck
+import resolve
 from edl import EDL, VoiceMap
 from common import FPS, H, PIPE, ROOT, W, load_json, save_json
 
@@ -266,13 +268,13 @@ def measure(timeline):
     return res
 
 
-def main(script_path):
+def main(script_path, script=None):
+    """script: the resolved script (build.py resolves it once); default: resolve script_path here."""
     script_path = Path(script_path)
     (ROOT / "build" / "meta.json").unlink(missing_ok=True)      # the slot stamp is written last: a crash leaves none
-    script = load_json(script_path)
-    style = load_json(PIPE / "style_default.json")
-    for k, v in script.get("style", {}).items():
-        style[k] = {**style[k], **v} if isinstance(v, dict) and isinstance(style.get(k), dict) else v
+    if script is None:
+        script = resolve.load_script(script_path, check_fonts=True)
+    style = script["style"]
     src_dur = script.get("src_duration", script.get("duration"))
     edl = EDL(script.get("edl"), src_dur)
     n_src = int(round(src_dur * FPS))
@@ -293,6 +295,9 @@ def main(script_path):
     takes = [[round(edl.out_time(a) * FPS) / FPS, round(edl.out_time(b) * FPS) / FPS] for a, b in script["takes"]]
     takes[0][0], takes[-1][1] = 0.0, duration
     screens = build_screens(script, words, takes)
+    glyphs = fontcheck.check_glyphs(style, [ln["tokens"] for sc in screens for b in sc["blocks"] for ln in b["lines"]])
+    if glyphs:                                               # before Chrome, which would draw them in a system font
+        sys.exit("glyph check failed:\n  " + "\n  ".join(glyphs))
     track = load_json(ROOT / script["track"])
     cam_spec = {**script.get("camera", {}), "src_takes": script["takes"]}
     clips_json = ROOT / Path(script.get("source", "")).parent / "clips.json"
@@ -304,7 +309,8 @@ def main(script_path):
     save_json(camera, build_dir / "camera.json")
     meta = {"duration": duration, "n_frames": n_frames, "src_duration": src_dur, "edl": edl.segs,
             "takes": takes, "words": [{"w": w["w"], "s": w["s"]} for w in words],
-            "script": str(script_path.resolve()), "brand": None, "format": None, "renders": [],
+            "script": str(script_path.resolve()), "brand": script.get("brand"), "format": script.get("format"),
+            "renders": [],
             "checks": {"fail": [], "warn": [], "applied": []}}
 
     # pass 1: measure blocks at origin
@@ -355,6 +361,9 @@ def main(script_path):
             sx0, sy0, sx1, sy1 = style["layout"]["safe"]
             if x < sx0 - Q or y < sy0 - Q or x + bb["w"] > sx1 + Q or y + bb["h"] > sy1 + Q:   # Q: solver grid
                 warn = (warn + "; " if warn else "") + "OUTSIDE the IG crop-safe area, shorten the lines"
+            if len(b["lines"]) > style["layout"].get("max_lines", len(b["lines"])):     # a brand's limit
+                warn = (warn + "; " if warn else "") + f"{len(b['lines'])} lines, the brand allows " \
+                                                       f"{style['layout']['max_lines']}: split the screen"
             report.append(f"{sc['t0']:6.2f}-{sc['t1']:6.2f} {b['id']} at ({x},{y}) {int(bb['w'])}x{int(bb['h'])}"
                           f"{'  !! ' + warn if warn else ''}  | {text}")
     occl = sorted({f for sc in screens if any(b.get("behind") for b in sc["blocks"])

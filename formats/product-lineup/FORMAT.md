@@ -3,7 +3,9 @@
 One creator presents 3-5 products of one brand, one block per product, each block the same grammar, then the
 whole lineup and a CTA. First reel: YOCASE shampoos, 2026-10-10 (`projects/yocase_line/make_script.py`).
 Full research: `.claude/skills/reel-videographer/playbook.md` section 3; this file is the working summary plus
-what the real footage taught us.
+what the real footage taught us. Start from `template.json`; `format.json` adds the hook preset and the music
+fade-out (the bed itself is the brand's). `make_script.py`'s placement hints (x 56-60, y 110) predate the
+2026-10-13 crop-safe area (x 128-952, y 250-1480): fix them before it is shown as the worked example.
 
 ## Skeleton (21-34 s)
 | Section | Length | Content |
@@ -24,8 +26,10 @@ what the real footage taught us.
 6. **Next block** on the next beat.
 
 Energy curve: the first block full, the middle ones ~20 % lighter (smaller zoom-through scale and landing), the
-hero block gets the accent: freeze 0.8-1.2 s on the sharpest label frame + flash + shutter, on a beat.
-Budget per ~30 s: 3-4 zoom-throughs, 1-2 whips, 3-5 punches, 1-2 flashes, 0 shakes without a hit.
+hero block gets the accent: freeze 15-24 f (30-36 f at the reel's end) on the sharpest label frame with a
+1.00 -> 1.03 creep through it + flash + shutter, on a beat (playbook 2.12).
+Budget per 30-34 s: 4 zoom-throughs, 2-4 whips, 3-5 punches, 1-2 flashes, 0-1 shake (only with a hit), about
+12-15 cuts (playbook 3.7).
 
 ## Shooting notes (send to the creator before the next lineup)
 - One clean take per product: name + hair type to camera, push to the lens, then a steady close-up (hold 3 s,

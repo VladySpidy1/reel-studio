@@ -26,3 +26,7 @@ presets and written rules, so they are made the same way, well, every time.
 
 - Each recurring decision that the model keeps getting wrong is a candidate for code or a learned rule.
 - Per-reel cost is driven by creative stages, not by plumbing; it is measured on real batches to pick the plan.
+
+## Notes
+
+- 2026-10-20, status: HDR→SDR is not built yet; HDR clips are refused at ingest (ADR-0006 notes).

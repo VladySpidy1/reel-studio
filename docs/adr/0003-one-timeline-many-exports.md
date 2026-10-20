@@ -27,3 +27,8 @@ processing (WB match, HDR→SDR, grade) is baked into shared intermediate media 
 - Each new effect type must be supported by every exporter (roughly +20% work per effect).
 - Subtitle text is not editable inside the editor (blocks are rendered animation); typos are fixed by
   re-rendering a single block clip on request.
+
+## Notes
+
+- 2026-10-20, status: HDR→SDR in the intermediate media is not built yet; HDR clips are refused at ingest
+  (ADR-0006 notes).

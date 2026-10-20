@@ -6,8 +6,9 @@ description: Edit a vertical talking/skit video into an Instagram reel in the TO
 # Reel subtitles + edit (house style)
 
 Everything is already researched and built. Do NOT re-research references, fonts or SFX, do NOT spawn
-subagents or workflows, do NOT read pipeline source unless a command fails. The style is fixed in
-`docs/STYLE.md` + `pipeline/style_default.json`; read `docs/STYLE.md` once.
+subagents or workflows, do NOT read pipeline source unless a command fails. The look is data: the subtitle system
+in `docs/STYLE.md` (read it once), the brand's look in `brands/<brand>/`, the format's structure in
+`formats/<format>/`; never copy style into a script.
 
 Aim for one draft render + at most one fix render. The picture side (which takes, cuts, transitions, zooms,
 freezes, SFX, beats) follows the `reel-videographer` skill - load it for any reel with movement or products. Watch
@@ -32,7 +33,19 @@ words.json (whisper large-v3 per speech chunk, so every repeated take is kept), 
 masks.npy (person matte), track.json, sheet.jpg (up to 48 frames). Look at sheet.jpg once.
 
 ## 2. Write the script  `projects/<name>/script.json`
-Copy `projects/_template/script.json`. Fill:
+Brand and format first:
+- `.venv/bin/python pipeline/resolve.py --list` -> brand and format ids with their aliases. Map the brief's words to
+  ids yourself (Ukrainian inflects: «для йокейсу» = `yocase`, «говорючу голову» = `talking-head`). If the brand is
+  missing, ask only for the brand. The format defaults to `talking-head`; when the footage has baked graphics
+  (logo, insets, chat bubble) it is `subtitles-only` - say so in the report.
+- Read `brands/<brand>/BRAND.md` and `formats/<format>/FORMAT.md`, plus `learned/brands/<brand>.md` and
+  `learned/formats/<format>.md` when they exist.
+- Copy `formats/<format>/template.json`, set `"brand"` (and keep `"format"`), then check what it resolves to:
+  `.venv/bin/python pipeline/resolve.py projects/<name>/script.json` (fonts, colours, music, grade, lint profile,
+  warnings). The brand's music bed, grade and SFX palette come from there; a script key overrides them
+  («без музики»: `"audio": {"music": null}`).
+
+Fill:
 - `source` (`build/<name>/source.ffconcat`), `src_duration` (cuts.json `duration`), `takes` (the source ranges
   you use, in output order), paths to prep outputs.
 - Voice independent of the picture (a line over B-roll or over the right product shot): `audio.voice_over`
@@ -60,8 +73,8 @@ Copy `projects/_template/script.json`. Fill:
 - `audio.sfx` (TOSUMI skit; names = files in assets/sfx without .wav, `peak_at` = output time): whoosh_soft_01_air_sweep
   on every cut (-11 dB), boing_01_spring / punch_soft_impact on gags (-13..-16), record_scratch_01 at a
   freeze (-9), bass_thump_02_synth on a big pop (-9), pop_04_light on pink words (-23), camera_shutter_01 +
-  sparkle_hit_fairy + shimmer_sparkle_whoosh on the product hold. Music: copy the template block
-  (Gummies, -17 dB, no sidechain); add `dropouts` for a gag freeze. Keep `voice.process` false.
+  sparkle_hit_fairy + shimmer_sparkle_whoosh on the product hold. Music: the brand's bed (no sidechain); add
+  `audio.music.dropouts` for a gag freeze. Keep `voice.process` false.
 - `doodles` (optional, max 3): `circle` around the product during the hold, `sparkle` stars.
 
 ## 3. Draft render (~2 min)
@@ -97,12 +110,12 @@ project the last reel's subtitles).
 
 ## Learned rules (creator/developer corrections, with the date)
 - 2026-10-13, YOCASE: "между текстом должны быть хорошие отступы, нормальные, чтоб текст не был впритык" - the
-  TOSUMI tight spacing is TOSUMI-only. YOCASE scripts set `style`: `"leading": 1.05, "word_space": 0.03,
-  "accent_gap": 0.06, "accent_gap_after": 0.04, "main": {"tracking": -0.005}`, accent tracking 0, accent colour
-  `#8A2E92`. With taller lines keep blocks to 2-3 lines and split long screens.
-- 2026-10-13, YOCASE: already-edited videos (logo, insets, chat bubble baked in) get subtitles only: one `src`
-  segment, push 1.0->1.0, no grade/music/SFX; exclude the baked graphics with `place.exclude`, and don't caption a
-  line that is already on screen (e.g. a chat bubble).
+  TOSUMI tight spacing is TOSUMI-only. The YOCASE spacing and colours are in `brands/yocase/brand.json`:
+  `"brand": "yocase"`, no `style` in the script. With taller lines keep blocks to 2-3 lines and split long screens.
+- 2026-10-13, YOCASE: already-edited videos (logo, insets, chat bubble baked in) get subtitles only:
+  `"format": "subtitles-only"` (one `src` segment, no grade/music/SFX); exclude the baked graphics with
+  `style.layout.exclude+` or `place.exclude`, and don't caption a line that is already on screen (e.g. a chat
+  bubble).
 - 2026-10-13, all brands: subtitles were cut off at the left edge on a phone in Instagram - IG fills 19.5:9 /
   20:9 screens and crops ~100 px per side. Safe area is now x 128-952, y 250-1480, rail x>850 & y>1050
   (`style_default.json`); hand-placed `place.x` / `place.safe` must stay inside it (the solver clips them).

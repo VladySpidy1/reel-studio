@@ -1,0 +1,19 @@
+{
+ "brand": "BRAND",
+ "format": "subtitles-only",
+ "source": "build/NAME/source.ffconcat",
+ "words": "build/NAME/words.json",
+ "masks": "build/NAME/masks.npy",
+ "track": "build/NAME/track.json",
+ "src_duration": 0.0,
+ "takes": [[0.0, 0.0]],
+ "edl": [{"src": [0.0, 0.0]}],
+ "style": {"layout": {"exclude+": []}},
+ "screens": [
+  {"take": 1, "blocks": [
+   {"lines": ["слова спікера", "з *акцентом*"]}
+  ]}
+ ],
+ "inserts": [],
+ "doodles": []
+}

@@ -22,3 +22,8 @@ rendering overnight is fine.
 - On 8 GB machines, prep may be slow; that is accepted. If it fails outright (out of memory), run prep on the
   developer's laptop.
 - The design discussion transcript stays on Windows; decisions live in this repo (`CONTEXT.md`, `docs/adr/`).
+
+## Notes
+
+- 2026-10-20: the developer's Mac is an M2 Pro with 16 GB, not an M3 Pro (factual correction; the decision is
+  unchanged).

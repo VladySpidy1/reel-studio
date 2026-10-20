@@ -1,0 +1,9 @@
+{
+  "name": "Subtitles only (already edited video)",
+  "aliases": ["лише субтитри", "тільки субтитри", "вже змонтоване", "готове відео"],
+  "camera": {"push": {"from": 1.0, "to": 1.0}},
+  "grade": null,
+  "audio": {"music": null},
+  "cta_check": false,
+  "lint": {"dead_span": null}
+}

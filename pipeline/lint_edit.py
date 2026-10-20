@@ -5,22 +5,23 @@ python lint_edit.py projects/<name>/script.json
 Prints FAIL (breaks the picture: over-upscaled frames, strobing, too many transition types) and WARN (reads as
 amateur: blips, pumping, mismatched whip speeds, whooshes on plain cuts, dead spans, beats missed) with output
 times. Exit code 1 when anything FAILs. It only reads the script, the EDL and the camera path; it does not judge
-taste (which shot, which word) - that stays with the editor.
+taste (which shot, which word) - that stays with the editor. The thresholds and bans are the resolved script's lint
+profile (pipeline/studio_default.json "lint", changed by the brand and the format); a brand's sfx_banned always
+applies.
 """
-import json
 import re
 import sys
+from fnmatch import fnmatch
 from pathlib import Path
 
 import camera as cam
+import resolve
 from common import FPS, ROOT, load_json
 from edl import EDL
 
 E_HELD, E_MOVING = 1.2, 1.65          # max upscale on a held frame / on a motion-blurred transition frame
 MIN_GAP = 15                          # frames between two event moves
-STATIC = 4.0                          # s without any visible change
 WHOOSH = re.compile(r"whoosh|swish|swoosh")
-NEVER = re.compile(r"record_scratch|cartoon_|boing_|tada_brass|cha_ching")
 DESIGNED = ("push", "zoom_through", "spin")
 
 
@@ -38,6 +39,9 @@ def whip_speeds(tr):
 
 
 def lint(script):
+    """script: resolved (resolve.load_script), for its lint profile."""
+    P = script["lint"]
+    who = f"{script.get('brand') or 'no brand'}/{script.get('format') or 'no format'}"
     fails, warns = [], []
     fail = lambda t, m: fails.append((t, m))
     warn = lambda t, m: warns.append((t, m))
@@ -94,8 +98,10 @@ def lint(script):
 
     for p in (p for p in spec.get("punches", []) if p.get("in", 0.1) < 0.5):      # slower ones are creeps
         held = p["until"] - p["t"]
-        if p["scale"] < 1.10 and held < 1.5:
+        if p["scale"] < P["punch_min"] and held < 1.5:
             warn(p["t"], f"punch {p['scale']} reads as a twitch; commit to >= 1.12 or drop it")
+        elif p["scale"] < P["punch_min"] and not P["slow_push"]:       # a slow push is not this brand's move
+            warn(p["t"], f"punch {p['scale']}: moves under 10% read as nothing ({script.get('brand')})")
         if p.get("out") and held < 1.0:
             warn(p["t"], f"punch in-out blip ({held:.2f} s); hold it to the end of the thought")
         if p.get("target", "face") == "face" and not p.get("anchor"):
@@ -139,10 +145,12 @@ def lint(script):
         if not any(-1 <= round((x["peak_at"] - tr["at"]) * FPS) <= 3 for x in sfx):
             warn(tr["at"], f"{tr['type']} has no SFX peaking within C-1..C+3 f")
     cuts = sorted({round(t0, 3) for t0, t1 in takes[1:]} | {round(o0, 3) for o0, o1, s in edl.items[1:]})
+    banned = P["sfx_banned"] + script.get("sfx_banned", [])
     for x in sfx:
-        if NEVER.search(x["name"]):
-            warn(x["peak_at"], f"{x['name']}: cartoon SFX, not for brand reels")
-        if WHOOSH.search(x["name"]) and not x.get("move"):      # "move": the real motion it sounds (frame-fill...)
+        if any(fnmatch(x["name"], b) for b in banned):
+            warn(x["peak_at"], f"{x['name']}: banned for {who}")
+        # "move": the real motion it sounds (frame-fill...); whoosh_on_cuts: a format that whooshes every take cut
+        if WHOOSH.search(x["name"]) and not x.get("move") and not P["whoosh_on_cuts"]:
             near_tr = any(abs(x["peak_at"] - t) <= 4 / FPS for t in tr_at)
             near_cut = [c for c in cuts if abs(x["peak_at"] - c) <= 2 / FPS]
             if near_cut and not near_tr:
@@ -156,15 +164,15 @@ def lint(script):
     # no dead spans: a cut, a transition, a punch, a flash or an A/B change at least every few seconds
     changes = sorted(set(cuts) | set(tr_at) | {p["t"] for p in spec.get("punches", [])} | set(flashes) | {0.0, edl.duration})
     for a, b in zip(changes, changes[1:]):
-        if b - a > STATIC:
+        if P["dead_span"] is not None and b - a > P["dead_span"]:
             warn(a, f"{b - a:.1f} s with no visible change (cut, punch, transition); add one by {a + 3:.1f} s")
 
-    if script.get("grade", {}).get("vignette", 0) > 0.05:
-        warn(0, "vignette above 0.05 reads as a filter")
+    if (script.get("grade") or {}).get("vignette", 0) > P["vignette_max"]:
+        warn(0, f"vignette above {P['vignette_max']} reads as a filter")
 
     music = script.get("audio", {}).get("music")
     m = re.search(r"(\d+)bpm", (music or {}).get("file", ""))
-    if m:
+    if m and P["beat_cuts"]:                  # off where cuts follow speech, not beats (talking head)
         import beats
         bpm = int(m.group(1))
         phase = beats.beat_phase(ROOT / "assets" / "music" / music["file"], bpm)
@@ -179,7 +187,7 @@ def lint(script):
 
 def main():
     path = Path(sys.argv[1])
-    fails, warns = lint(json.loads(path.read_text(encoding="utf-8")))
+    fails, warns = lint(resolve.load_script(path))
     for tag, items in (("FAIL", fails), ("WARN", warns)):
         for t, m in sorted(items):
             print(f"{tag} {t:6.2f}s  {m}")

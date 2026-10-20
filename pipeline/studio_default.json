@@ -1,0 +1,47 @@
+{
+  "terms": {
+    "reels": {"heard_as": ["рілс*", "рілз*"]},
+    "tiktok": {"heard_as": ["тікток*", "тік ток"]},
+    "instagram": {"heard_as": ["інстаграм*"]},
+    "claude": {"heard_as": ["клод*"]}
+  },
+  "censor": [],
+  "censor_sets": {
+    "standard": ["гроші", "безкоштовн*", "заробіток", "підп*ска"]
+  },
+  "cta_phrases": ["^(на)?пиш(и|іть)$", "^посилання$", "^переход(ь|ьте|и|іть)$", "^(в|у)?(дірект|директ)(і|у)?$",
+                  "^коментар", "^підпиш(ись|іться)$", "^підписуй(ся|тесь)$", "^лінк"],
+  "cta_check": false,
+  "sfx_palette": {
+    "whip": [{"name": "whoosh_quick_03_swish", "gain_db": -12}, {"name": "whoosh_soft_02_wind_swoosh", "gain_db": -12}],
+    "zoom_rush": [{"name": "whoosh_05_swipe_zoom", "gain_db": -12}, {"name": "whoosh_04_air_into_cut", "gain_db": -12}],
+    "zoom_land": [{"name": "bass_thump_01_sub", "gain_db": -14}, {"name": "punch_soft_impact", "gain_db": -14},
+                  {"name": "bass_thump_02_synth", "gain_db": -14}],
+    "name_pop": [{"name": "pop_04_light", "gain_db": -20}, {"name": "pop_02_bubble_a", "gain_db": -20},
+                 {"name": "pop_03_bubble_b", "gain_db": -20}],
+    "tick": [{"name": "click_01_tick", "gain_db": -22}],
+    "hero": [{"name": "camera_shutter_01", "gain_db": -10}],
+    "cta": [{"name": "ding_02_soft_chime", "gain_db": -18}]
+  },
+  "sfx_banned": [],
+  "lint": {
+    "sfx_banned": ["record_scratch_*", "cartoon_*", "boing_*", "tada_brass", "cha_ching_*"],
+    "whoosh_on_cuts": false,
+    "punch_min": 1.10,
+    "slow_push": true,
+    "dead_span": 4.0,
+    "vignette_max": 0.05,
+    "beat_cuts": true
+  },
+  "presets": {
+    "hook": {"lines": {"scale": 1.5, "anim": "pop"}, "align": "center", "behind": false, "dur": 2.5, "fade": 0.2,
+             "place": {"x": "center", "y": 300, "safe": [128, 270, 952, 700], "avoid": "face"}},
+    "cta": {"lines": {"scale": 1.25, "anim": "pop"}, "align": "center", "behind": false, "hold": 2.0, "tail": 0.2,
+            "fade": 0.2, "reveal": "block", "sfx": {"event": "cta"},
+            "place": {"x": "center", "y": 900, "safe": [128, 860, 952, 1248], "avoid": "face"}},
+    "interjection": {"lines": {"anim": "pop", "scale": 3}},
+    "punchline": {"lines": {"scale": 1.55}},
+    "brand_name": {"anim": "pop", "scale": 1.2},
+    "product_label": {"anim": "pop", "scale": 1.3}
+  }
+}

@@ -41,6 +41,7 @@ import numpy as np
 
 import build
 import camera as cam_mod
+import resolve
 import video_pass
 from common import (BUILD, FPS, H, OUT, PIPE, ROOT, W, default_procs, keep_awake, load_json, reel_id, require_slot,
                     run_log, short, source_path, studio_lock)
@@ -277,7 +278,7 @@ def main():
 
 def export(a, name):
     T = time.time()
-    script = load_json(a.script)
+    script = resolve.load_script(a.script, check_fonts=True)
     proj = OUT / f"{name}_project"
     media = proj / "media"
     media.mkdir(parents=True, exist_ok=True)

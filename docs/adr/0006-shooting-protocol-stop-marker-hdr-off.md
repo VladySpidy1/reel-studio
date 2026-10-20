@@ -19,3 +19,8 @@ converting HDR to SDR for social platforms without proper tone-mapping shifts co
 - The take cutter needs a robust «стоп» detector (word-level timestamps; tolerate «стоп стоп», laughter,
   restarts mid-sentence).
 - Footage shot before this protocol falls back to the existing take-cut heuristics.
+
+## Notes
+
+- 2026-10-20, status: not built yet. There is no «стоп» marker cutter and no HDR→SDR tone-map; `ingest.py` refuses
+  HDR clips with a fix hint instead.

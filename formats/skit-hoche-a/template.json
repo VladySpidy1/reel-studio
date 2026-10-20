@@ -1,0 +1,22 @@
+{
+ "brand": "BRAND",
+ "format": "skit-hoche-a",
+ "source": "build/NAME/source.ffconcat",
+ "words": "build/NAME/words.json",
+ "masks": "build/NAME/masks.npy",
+ "track": "build/NAME/track.json",
+ "src_duration": 0.0,
+ "takes": [[0.0, 0.0]],
+ "edl": [{"src": [0.15, 0.0]}, {"hold": 0.0, "dur": 1.2}, {"src": [0.0, 0.0]}],
+ "screens": [
+  {"take": 1, "blocks": [
+   {"preset": "hook", "lines": ["у якому №", {"text": "_впізнала себе?_", "scale": 1.45}]},
+   {"lines": ["№1", "хоче зробити щось", "_гарне_"]},
+   {"lines": ["// а насправді", "*(провал)*"]}
+  ]}
+ ],
+ "inserts": [],
+ "doodles": [],
+ "camera": {"punches": [], "freezes": [], "shakes": [], "flashes": [], "gains": {}},
+ "audio": {"sfx": []}
+}

@@ -1,57 +1,51 @@
-# House subtitle style (from the reference investigation, Oct 2026)
+# Subtitle system (universal)
 
-Client brief (UA, paraphrased): previous subtitles had an untrendy font and were too big. Liked references:
-ref2 (DZmz4VRMULC) and ref3 (DXOmJP5jWid). From ref3 take the font for the main text, the animation and
-the "interesting" placement, but the main text is WHITE and accent words are PINK. Letter spacing and line
-spacing must be tight.
+How subtitles are written, animated and placed in every reel. **The numbers are data, not prose:** the studio
+look is `pipeline/style_default.json` (= the TOSUMI look), a brand changes it in `brands/<brand>/brand.json`, and
+`pipeline/resolve.py <script>` shows what a reel resolves to. Brand rules in words are in `brands/<brand>/BRAND.md`,
+format structure in `formats/<format>/FORMAT.md`.
 
-## Typography (pipeline/style_default.json)
-| element | font | size @1080w | tracking | colour |
-|---|---|---|---|---|
-| main text | Roboto Condensed 420 (≈ Arial Narrow of ref3) | 58 px | -0.03 em | #FFFFFF |
-| fail / punch words `*…*` | Playfair Display Italic 500, in (parentheses) | same | -0.015 em | #FF3D96 (TOSUMI-bag pink) |
-| dream / setup words `_…_` | Playfair Display Italic 500, no brackets | same | -0.015 em | white |
-| take label `№N` | Playfair Display 400, "( №N )" | 0.95× | 0 | pink |
-| ornament `//` | main font | same | | pink |
-- Leading 0.62 for plain white lines (ref3-tight); lines with serif accents/labels get +0.16 em, the line
-  after them +0.2 em, so pink never sits on white.
+Origin (Oct 2026, TOSUMI): the client found the previous subtitles untrendy and too big. From the liked reference
+came the condensed main font, the per-letter animation and the "interesting" placement beside the person, with
+white main text and the accent words in the brand colour.
+
+## Markup (one script line = one visual line)
+| markup | role | drawn with |
+|---|---|---|
+| plain words | main text | `style.main` (alias `Main`) |
+| `*…*` | accent: the punch/fail word, one per half-sentence | `style.accent` (alias `Accent`), accent colour |
+| `_…_` | emphasis: the dream/setup words | `style.accent` font, main colour |
+| `№N` | take label, drawn "( №N )", pops in | `style.label` (alias `Serif`) |
+| `//` | ornament | main font, accent colour |
 - Lowercase, punctuation dropped (except `?` in literal titles).
-- Outline: soft drop-shadow ring (1 px 62% black + 7 px 26% black). Needed: white on a bright beige wall.
-- Size rule: text is SMALL (cap ≈ 41 px). Only two things get big: an interjection gag (`ой`, ×3, pop)
-  and the final punchline header (×1.55).
+- A line may be a dict: `scale`, `anim` (`pop`/`type`/`none`), `color`, `align`, `indent`, `dy`, `literal` + `t`
+  (not spoken, e.g. a hook title). `"preset": "<name>"` on a block or line pulls a named look/structure from the
+  studio, brand and format `presets` (hook, cta, interjection, punchline, brand_name, product_label).
+- Colours may name a brand colour: `"color": "@repair_plex"`.
+- Lines with serif accents or labels get extra room above (`accent_gap`) and the line after them below
+  (`accent_gap_after`), so accent letters never sit on the main text.
+- Size rule: text is small. Only the big moments (an interjection gag, a final punchline, a hook) get scaled.
+
+## Fonts
+`style.fonts` maps the aliases `Main`, `Accent`, `Serif` to font files (one face or a list of static faces, with
+`weight`, `style`, `features`). Bundled OFL fonts live in `assets/fonts/`; licensed brand fonts in
+`brands/<brand>/local/` (gitignored). The build checks that every character a reel shows exists in its fonts
+(`pipeline/fontcheck.py`) and stops otherwise: Chrome would silently draw it in a system font.
 
 ## Animation
-- Per-letter elastic typewriter (ref3): each glyph 0.13 s, scaleY 0.12 → 1.32 → 1, slight skew; 40 chars/s,
-  never earlier than its spoken word. Accent words overshoot ×1.15.
-- Labels and big gag words pop as whole words (scale 0.2 → 1.28 → 1 with a little rotation).
-- Screens cut hard at take cuts; titles/hero fade 0.2–0.25 s.
+- Per-letter elastic typewriter (`style.anim`): each glyph scales up from a squashed start with a slight skew,
+  typed at a fixed rate and never before its spoken word; accent words overshoot more.
+- Labels and big words pop as whole words (scale up with a little rotation).
+- Screens cut hard at take cuts; titles fade (`fade`).
 
-## Layout (automatic solver, pipeline/build_timeline.py)
+## Layout (automatic solver, `pipeline/build_timeline.py`)
 - Blocks float beside the person ("editorial" placement), never a bottom bar.
-- Person matte (Robust Video Matting) per frame; a block must stay clear of her until it has been read
-  (`read_time` 0.9 s after its last word); afterwards she may walk IN FRONT of it (text-behind-subject).
-- IG safe zone: x 128–952, y 250–1480, right button column (x>850, y>1050) excluded. Instagram fills tall
-  phones (19.5:9, 20:9) edge to edge and crops ~100 px off each side of the 1080 frame; text at x 56 was cut
-  off on a real phone (2026-10-13). The solver never leaves this area, and the build flags any block outside it.
-- Video-specific exclusions (bright lamps etc.) go into the script's `style.layout.exclude`.
-
-## Comedy structure that worked ("Хоче X, а Y" skits)
-- One screen per take, two blocks: setup `№N / хоче … _dream_` near her at chest height, punch
-  `// а … *(fail)*` elsewhere (often top-left). Both halves visible together until the cut.
-- Pink = the fail/punch word only (consistent → viewers anticipate it). Dream words = white serif.
-- Hook title for the first ~1.6 s (literal text, e.g. "у якому № / _впізнала себе?_").
-- Interjection gag: video-only freeze on the silent beat + record scratch + music dropout, then a big pink
-  pop word next to her face + punch-in + shake + thump.
-- Product payoff: after the last word, a 1.2 s freeze on the best product frame (flash + shutter + sparkle
-  SFX, hand-drawn pink circle around the product), then let her walk out so the end frame (empty hallway)
-  loops into frame 0. No text on the last 0.6 s.
-
-## Edit & sound
-- Per-take white-balance gains (match takes), light grade (lift .01, contrast 1.04, sat 1.04, vignette .10).
-- Slow push 1.00→1.04 per take, cut-in zoom 1.06 with slight zoom blur, punch-ins 1.05–1.07 on fail words.
-- Voice: left as recorded (phone/CapCut exports are already cleaned; extra EQ/de-ess/compression sounded
-  thin and odd). Only the final mix is normalised to -14 LUFS / -1.5 dBTP. (`voice.process: true` exists.)
-- Music bed (Mixkit "Gummies" 120 bpm) static at -17 dB, NO sidechain ducking (it audibly pumps);
-  short 40 ms-ramped dropouts for gag freezes.
-- SFX (assets/sfx, Mixkit/CC0): whoosh on every cut, boing/punch/scratch/thump on gags, soft pop -23 dB on
-  pink words, chime on "salon", shutter+sparkle+shimmer on the product freeze.
+- Person matte per frame; a block stays clear of her until it has been read (`layout.read_time` after its last
+  word); afterwards she may walk IN FRONT of it (text-behind-subject). `behind: false` keeps a block in front.
+- IG crop-safe area: x 128-952, y 250-1480, and the button rail (x > 850, y > 1050) excluded (`layout.safe`,
+  `layout.exclude`). Instagram fills tall phones (19.5:9, 20:9) edge to edge and crops ~100 px off each side; text
+  at x 56 was cut off on a real phone (2026-10-13). The solver never leaves this area, the build flags any block
+  outside it, and no brand or format may widen it.
+- Video-specific exclusions (bright lamps, baked logos) go into `style.layout.exclude+`, which adds rectangles; a
+  plain `exclude` replaces the list and drops the rail (the resolver warns).
+- A brand may cap the lines per block (`layout.max_lines`); the layout report flags longer blocks.

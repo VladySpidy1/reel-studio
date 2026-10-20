@@ -1,0 +1,25 @@
+{
+  "name": "YOCASE",
+  "aliases": ["yocase", "йокейс", "йокейз", "ю-кейс", "юкейс", "йо кейс"],
+  "style": {
+    "accent": {"color": "@accent", "outline": "0 0 1px rgba(40,0,45,.85), 0 0 1px rgba(40,0,45,.85)", "tracking": 0.0},
+    "label": {"color": "@accent"},
+    "main": {"tracking": -0.005},
+    "leading": 1.05, "word_space": 0.03, "accent_gap": 0.06, "accent_gap_after": 0.04,
+    "layout": {"max_lines": 3}
+  },
+  "colors": {"accent": "#8A2E92", "energy": "#22A866", "repair_plex": "#C4207F", "balance": "#4A5BD8",
+             "fix_color": "#0FA0DC"},
+  "terms": {
+    "yocase": {"heard_as": ["u-case", "ю кейс", "юкейс", "ю-кейс", "йокейс"]},
+    "repair plex": {"heard_as": ["репейрплекс*", "реперплекс*", "репейр плекс*"], "color": "@repair_plex"},
+    "energy": {"heard_as": ["енерджі"], "color": "@energy"},
+    "balance": {"heard_as": ["баланс"], "color": "@balance"},
+    "fix color": {"heard_as": ["фікс-колор", "фіксколор", "pixcolor"], "color": "@fix_color"}
+  },
+  "cta_phrases+": ["^обирайте$"],
+  "grade": {"lift": 0.01, "contrast": 1.04, "saturation": 1.04, "vignette": 0.04},
+  "audio": {"music": {"file": "music_03_gimme_that_groove_112bpm_full.wav", "gain_db": -18, "offset": 18.423}},
+  "sfx_banned": ["record_scratch_*", "cartoon_*", "boing_*", "tada_brass", "cha_ching_*"],
+  "lint": {"slow_push": false}
+}

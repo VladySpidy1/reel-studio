@@ -1,0 +1,24 @@
+{
+ "brand": "BRAND",
+ "format": "talking-head",
+ "source": "build/NAME/source.ffconcat",
+ "words": "build/NAME/words.json",
+ "masks": "build/NAME/masks.npy",
+ "track": "build/NAME/track.json",
+ "src_duration": 0.0,
+ "takes": [[0.0, 0.0]],
+ "edl": [{"src": [0.0, 0.0]}],
+ "screens": [
+  {"take": 1, "blocks": [
+   {"preset": "hook", "lines": ["хук дослівно з брифу"]},
+   {"lines": ["перша думка", "з *акцентом* по змісту"]}
+  ]},
+  {"take": 1, "blocks": [
+   {"preset": "cta", "lines": ["заклик", "*словами спікера*"]}
+  ]}
+ ],
+ "inserts": [],
+ "doodles": [],
+ "camera": {"punches": []},
+ "audio": {"sfx": []}
+}

@@ -1,4 +1,20 @@
 {
+  "fonts": {
+    "Main": {
+      "file": "assets/fonts/RobotoCondensed-VF.ttf",
+      "weight": "100 900"
+    },
+    "Accent": {
+      "file": "assets/fonts/PlayfairDisplay-Italic-VF.ttf",
+      "weight": "400 900",
+      "style": "italic"
+    },
+    "Serif": {
+      "file": "assets/fonts/PlayfairDisplay-VF.ttf",
+      "weight": "400 900",
+      "features": "\"lnum\" 1, \"case\" 1"
+    }
+  },
   "main": {
     "family": "Main",
     "weight": 380,

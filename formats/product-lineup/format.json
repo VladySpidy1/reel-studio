@@ -1,0 +1,6 @@
+{
+  "name": "Product lineup",
+  "aliases": ["лінійка", "лінійки", "наші лінійки", "огляд лінійки"],
+  "audio": {"music": {"fade_out": 0.8}},
+  "presets": {"hook": {"lines": {"literal": true, "t": 0.0}}}
+}

@@ -8,7 +8,8 @@ summary (problems first, then one line per stage); the full output is in build/<
 on the terminal too with --verbose. One build at a time (build/.studio.lock): a second one exits 2.
 The build slot (build/meta.json, camera.json, timeline.json, overlay/) holds one reel: --skip-timeline and
 --skip-overlay refuse unless it holds this script (--force: developer only), and a slot whose checks FAIL is not
-rendered without --allow-check-fail.
+rendered without --allow-check-fail. The script is resolved once (resolve.py: studio -> brand -> format -> script);
+the log starts with the resolver summary, and build/<reel>/resolved_<name>.json keeps what was rendered.
 """
 import argparse
 import os
@@ -20,6 +21,7 @@ from pathlib import Path
 import audio
 import build_timeline
 import overlay_render
+import resolve
 import video_pass
 from common import (BUILD, OUT, ROOT, default_procs, keep_awake, load_json, reel_id, require_slot, run_log,
                     save_json, short, source_path, studio_lock)
@@ -63,12 +65,14 @@ def main():
 
 
 def build(a, name):
-    script = load_json(a.script)
+    script = resolve.load_script(a.script, check_fonts=not a.skip_timeline)
+    print(resolve.summary(script))
+    save_json(script, BUILD / reel_id(a.script) / f"resolved_{name}.json")
     src = source_path(script)
     OUT.mkdir(exist_ok=True)
     T = time.time()
     if not a.skip_timeline:
-        build_timeline.main(a.script)
+        build_timeline.main(a.script, script)
         print(f"[timeline] {time.time() - T:.1f}s -> {short(BUILD / 'timeline.json')}", flush=True)
     meta = require_slot(a.script, need_pass=not a.allow_check_fail, force=a.force)
     dur, n = meta["duration"], meta["n_frames"]

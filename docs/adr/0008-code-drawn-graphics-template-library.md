@@ -25,3 +25,8 @@ creator's reels have a person in frame, so graphics must respect the face and pr
 
 - Templates are a quality tool, not only a cost saver: polished, consistent, recognisable brand look.
 - Generative video models are out of scope for now; revisit only with a concrete use case and brand approval.
+
+## Notes
+
+- 2026-10-20: the "glitch accent word" candidate is limited to at most one per reel, for a deliberate "error"
+  beat (playbook 2.22).

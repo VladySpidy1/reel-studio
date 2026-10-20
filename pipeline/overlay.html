@@ -3,9 +3,6 @@
 <head>
 <meta charset="utf-8">
 <style>
-  @font-face { font-family: 'Main'; src: url('../assets/fonts/RobotoCondensed-VF.ttf'); font-weight: 100 900; }
-  @font-face { font-family: 'Accent'; src: url('../assets/fonts/PlayfairDisplay-Italic-VF.ttf'); font-weight: 400 900; font-style: italic; }
-  @font-face { font-family: 'Serif'; src: url('../assets/fonts/PlayfairDisplay-VF.ttf'); font-weight: 400 900; }
   html, body { margin: 0; width: 1080px; height: 1920px; background: transparent; overflow: hidden; }
   #stage { position: absolute; inset: 0; }
   .block { position: absolute; left: 0; top: 0; display: none; }
@@ -22,7 +19,8 @@
 <script>
 // ---------------------------------------------------------------------------
 // Deterministic subtitle renderer. Python calls init(timeline) once, then seek(t)
-// per frame and screenshots the transparent page.
+// per frame and screenshots the transparent page. The fonts come from the timeline
+// (style.fonts: {alias: [{url, weight, style, features}]}, resolved from the brand).
 // Letters are laid out in a normal text run (so kerning + tracking are exact), then each
 // glyph is cloned into an absolutely positioned span at its measured pen position so it can
 // be animated individually without changing the typography.
@@ -52,9 +50,13 @@ function styleForKind(kind, S) {
   return base;
 }
 
+function faces(family) {
+  return (TL.style.fonts || {})[family] || [];
+}
+
 function applyFont(el, st) {
   el.style.fontFamily = `'${st.family}'`;
-  el.style.fontFeatureSettings = st.family === 'Serif' ? '"lnum" 1, "case" 1' : 'normal';
+  el.style.fontFeatureSettings = (faces(st.family)[0] || {}).features || 'normal';
   el.style.textShadow = st.outline || 'none';
   el.style.fontWeight = st.weight;
   el.style.fontStyle = st.italic ? 'italic' : 'normal';
@@ -118,7 +120,14 @@ function layoutLine(line, S) {
 
 async function init(timeline) {
   TL = timeline;
-  await Promise.all(['400 56px Main','italic 500 56px Accent','400 56px Serif'].map(f => document.fonts.load(f, 'абвгґдеєжзиіїйклмн№()')));
+  if (!TL.style.fonts) throw new Error('timeline.json predates brand fonts: rerun build_timeline');
+  for (const [alias, list] of Object.entries(TL.style.fonts)) {
+    for (const f of list) {
+      const face = new FontFace(alias, `url("${f.url}")`, { weight: f.weight || 'normal', style: f.style || 'normal' });
+      try { await face.load(); } catch (e) { throw new Error(`font ${alias} failed: ${f.url}`); }
+      document.fonts.add(face);
+    }
+  }
   await document.fonts.ready;
   const S = TL.style;
   const stage = document.getElementById('stage');

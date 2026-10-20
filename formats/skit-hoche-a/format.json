@@ -1,0 +1,11 @@
+{
+  "name": "Skit: хоче X, а Y",
+  "aliases": ["скетч", "хоче а", "хоче-а"],
+  "camera": {"push": {"from": 1.0, "to": 1.04, "ease": "linear"}},
+  "presets": {
+    "hook": {"until": 1.6, "place": {"y": 270}, "lines": {"literal": true, "t": 0.0}},
+    "interjection": {"behind": false},
+    "punchline": {"behind": false, "fade": 0.25, "place": {"y": 300}}
+  },
+  "lint": {"sfx_banned": ["tada_brass", "cha_ching_*"], "whoosh_on_cuts": true}
+}

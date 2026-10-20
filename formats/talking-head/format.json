@@ -1,0 +1,13 @@
+{
+  "name": "Talking head for a brand",
+  "aliases": ["говорюча голова", "розмовне", "експерт", "експертне", "talking head"],
+  "audio": {"music": {"fade_in": 0.05, "fade_out": 0.8}},
+  "presets": {"hook": {"lines": {"literal": true, "t": 0.0}}},
+  "cta_check": true,
+  "lint": {"beat_cuts": false},
+  "grammar": {
+    "trim": {"min_cut": 0.45, "pad_before": 4, "pad_after": 3, "keep_after_sentence": 10, "head": 0.15, "tail": 0.4,
+             "min_shot": 1.0, "take_gap": 1.0, "breath": "keep"},
+    "speed_max": 1.2
+  }
+}

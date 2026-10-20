@@ -12,7 +12,8 @@ import cv2
 import numpy as np
 from playwright.sync_api import sync_playwright
 
-from common import BUILD, H, PIPE, W, load_json, source_path
+import resolve
+from common import BUILD, H, PIPE, W, source_path
 from edl import EDL
 
 
@@ -42,7 +43,7 @@ def main():
     ap.add_argument("--frame", default="", help="override background: comma times of source frame")
     a = ap.parse_args()
     timeline = json.loads(Path(a.timeline).read_text(encoding="utf-8"))
-    script = load_json(a.script)
+    script = resolve.load_script(a.script)
     src = source_path(script)
     edl = EDL(script.get("edl"), script["src_duration"])
     out = Path(a.out)

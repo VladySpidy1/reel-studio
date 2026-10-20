@@ -24,3 +24,6 @@ Thumbs.db
 # Logs and per-machine Claude settings
 *.log
 .claude/settings.local.json
+
+# Licensed brand fonts, logos and photos (the repo is public; installed on each Mac in person)
+brands/*/local/

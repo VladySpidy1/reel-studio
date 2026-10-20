@@ -25,15 +25,15 @@ handles mechanics (ADR-0001).
 
 - **Brand** — a client the creator makes reels for. Defines how a reel *looks*: fonts, colours, subtitle
   animation, grade/LUT, music mood, SFX palette, logo and CTA, tone of voice, prohibitions, learned rules.
-  Lives in `brands/<brand>/` (planned).
+  Lives in `brands/<brand>/`.
 - **Format** — a genre of reel: skit ("хоче X, а Y"), tutorial, before/after, GRWM, review, unboxing, etc.
   Defines how a reel is *cut*: structure, pacing, hook, where freezes and product holds go.
-  Lives in `formats/<format>/` (planned).
+  Lives in `formats/<format>/`.
 - **Universal grammar** — editing rules that apply to any talking reel regardless of format: hook, silence
   cleanup, subtitles, accent words, punch-ins, SFX.
 - **Brief** — what the creator gives per reel: brand, format, idea, goal, optional reference.
 - **Take (дубль)** — one attempt at a line. A failed take ends with the creator saying **«стоп»** (shooting
-  protocol, ADR-0006); the pipeline cuts on that marker without model guesswork.
+  protocol, ADR-0006); a cutter on that marker is planned (roadmap 4), not built.
 - **Timeline** — the single source of truth for one reel (`projects/<name>/script.json` today). Every export
   is generated from it (ADR-0003).
 - **Screen / block** — subtitle units: one screen per take, blocks of 2–4-word lines inside it.
@@ -42,8 +42,9 @@ handles mechanics (ADR-0001).
   cards, counter, before/after wipe, CTA end card, …). Designed once, filled with text/numbers/timings per reel.
 - **Bespoke graphic** — a one-off code-drawn graphic made for a specific idea; promoted to a template if it
   works (ADR-0008).
-- **Intermediate media** — colour-normalised video (white balance matched across takes, HDR→SDR, brand
-  grade), 1080×1920 ProRes, shared by every export so the MP4 and the editable project look identical.
+- **Intermediate media** — colour-normalised video (white balance matched across takes, brand grade), 1080×1920
+  ProRes, shared by every export so the MP4 and the editable project look identical. HDR clips are refused at
+  ingest (`ingest.py`); there is no HDR→SDR tone-map yet.
 - **Draft MP4** — the rendered reel, ready to post.
 - **Editable project** — FCPXML timeline plus per-element media (subtitle blocks and graphics as alpha
   ProRes 4444 clips, SFX, music, zoom keyframes) for finishing in DaVinci Resolve (ADR-0004).
@@ -70,7 +71,7 @@ handles mechanics (ADR-0001).
 | [0007](docs/adr/0007-three-session-types-and-competitor-research.md) | Three session types; competitor research; weekly stats loop |
 | [0008](docs/adr/0008-code-drawn-graphics-template-library.md) | Code-drawn graphics: per-brand template library plus bespoke graphics |
 
-## Current state (2026-10-10)
+## Current state (2026-10-20)
 
 - Pipeline in `pipeline/`, ported to macOS / Apple Silicon (roadmap step 1 done; `setup_mac.sh`, locked deps in
   `requirements.lock.txt`, run everything with `.venv/bin/python`):
@@ -97,12 +98,19 @@ handles mechanics (ADR-0001).
     shakes and the limiter are not reproduced.
 - Fixed while porting: picture lagged sound by a frame after most EDL cuts (ffmpeg rawvideo seek), and EDL
   times between frames made the picture repeat/skip frames; both affected the Windows renders too.
-- The TOSUMI style is hard-coded in `docs/STYLE.md` and `pipeline/style_default.json`. The skill
-  `.claude/skills/reel-subtitles/` is the TOSUMI-specific v0 and will be generalised.
+- Brands and formats are data (2026-10-20, roadmap step 3): `brands/<brand>/` (`brand.json` + `BRAND.md`) and
+  `formats/<format>/` (`format.json` + `FORMAT.md` + `template.json`). `pipeline/resolve.py` resolves every script
+  studio → brand → format → script for all entry points; a script without a brand keeps the studio look, which
+  is TOSUMI's (`pipeline/style_default.json`). Brands: TOSUMI, YOCASE. Formats: talking-head, subtitles-only,
+  skit-hoche-a, product-lineup. `docs/STYLE.md` is the universal subtitle system. The skill
+  `.claude/skills/reel-subtitles/` is still the TOSUMI-first v0 and will be generalised.
 - Reels: `projects/tosumi_hair/` (finished, Windows) and `projects/yocase_line/` — second brand (YOCASE, 4
   shampoos), raw iPhone clips; v4 cut with the videographer skill (`make_script.py` generates its script). Its
   hook (phone mock-up with the creator cut out, from a reference reel) is the next graphic to build. Renders,
   footage and build files are not in git.
+- 2026-10-13: three already-edited YOCASE videos got subtitles only (`projects/yocase_2371`, `yocase_2373`,
+  `yocase_2477`): comfortable YOCASE spacing, baked graphics excluded, and the IG crop-safe area (x 128-952,
+  y 250-1480) after text was cut off on a real phone.
 - Reference for the code-drawn graphics style the developer wants available:
   `docs/references/claude_unity_sheet.jpg` — contact sheet of a 103 s fully code-generated explainer
   (kinetic type, timer, UI mock-ups, wireframe 3D, terminal typing, waveform, glitch, phone mock-up, diagrams,
@@ -121,7 +129,9 @@ handles mechanics (ADR-0001).
   CapCut desktop re-checked on 2026-10-10: still no timeline import; its brand-work terms are a further reason
   not to target it.
 - Creator's Claude plan: decided by measuring real batches; Max is acceptable.
-- Distribution: private GitHub repository; the creator's machine pulls updates.
+- Distribution: public GitHub repository; the creator's machine pulls updates. No secrets, keys, brand books or
+  licensed assets in git: licensed brand fonts, logos and photos live in the gitignored `brands/<brand>/local/`
+  and are copied to her Mac in person.
 
 ## Roadmap (agreed order)
 

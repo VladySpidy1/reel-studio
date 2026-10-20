@@ -7,13 +7,14 @@ import json
 import sys
 from pathlib import Path
 
+import resolve
 from common import ROOT, load_json
 from edl import EDL, VoiceMap
 
 
 def main(path):
     sys.stdout.reconfigure(encoding="utf-8")
-    sc = load_json(path)
+    sc = resolve.load_script(path)
     edl = EDL(sc.get("edl"), sc["src_duration"])
     voice = VoiceMap(edl, sc.get("audio"))
     for w in voice.warnings:
