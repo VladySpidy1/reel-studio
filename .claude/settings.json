@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/python pipeline/assets.py *)",
+      "Bash(.venv/bin/python pipeline/brief.py *)",
+      "Bash(.venv/bin/python pipeline/build.py *)",
+      "Bash(.venv/bin/python pipeline/build_timeline.py *)",
+      "Bash(.venv/bin/python pipeline/cleanup.py plan *)",
+      "Bash(.venv/bin/python pipeline/compare_render.py *)",
+      "Bash(.venv/bin/python pipeline/contact_sheet.py *)",
+      "Bash(.venv/bin/python pipeline/doctor.py *)",
+      "Bash(.venv/bin/python pipeline/export_fcpxml.py *)",
+      "Bash(.venv/bin/python pipeline/fontcheck.py *)",
+      "Bash(.venv/bin/python pipeline/inbox.py *)",
+      "Bash(.venv/bin/python pipeline/ingest.py *)",
+      "Bash(.venv/bin/python pipeline/inserts.py *)",
+      "Bash(.venv/bin/python pipeline/lint_edit.py *)",
+      "Bash(.venv/bin/python pipeline/prep.py *)",
+      "Bash(.venv/bin/python pipeline/preview.py *)",
+      "Bash(.venv/bin/python pipeline/resolve.py *)",
+      "Bash(.venv/bin/python pipeline/review_frames.py *)",
+      "Bash(.venv/bin/python pipeline/selftest.py *)",
+      "Bash(.venv/bin/python pipeline/sheet.py *)",
+      "Bash(.venv/bin/python pipeline/times.py *)",
+      "Bash(.venv/bin/python pipeline/trim.py *)",
+      "Bash(git pull --ff-only)",
+      "Bash(open output/*.mp4)",
+      "Bash(open inbox/*/)",
+      "Bash(open done/*/)",
+      "Bash(open -R output/*)",
+      "Bash(open -R inbox/*)",
+      "Bash(open -R done/*)",
+      "Skill(reel)",
+      "Skill(reel *)",
+      "Skill(reel-videographer)",
+      "Skill(reel-videographer *)",
+      "Edit(/inbox/**)",
+      "Edit(/learned/**)",
+      "Edit(/build/**)",
+      "Edit(/output/**)"
+    ]
+  }
+}
