@@ -238,7 +238,25 @@ def segment(a, b, cam, out_path, overlay_dir, timeline_path, masks_path, grade, 
     if timeline_path and masks_path:
         occl = set(tl.get("occlude_frames", []))
         masks = np.load(masks_path, mmap_mode="r")
-    slots = {}                      # render_frame's layers, filled from the timeline (none yet)
+    slots = {}                      # render_frame's layers, filled from the timeline
+    front = set(tl.get("front_frames", []))
+    if front and overlay_dir:
+        def front_slot(img, i, fr):
+            """The behind:false text over her (overlay/front/NNNNN.png): the overlay's warp, no matte."""
+            if i not in front:      # the timeline lists the front frames; a stale PNG is never read
+                return img
+            path = Path(overlay_dir) / "front" / f"{i:05d}.png"
+            bgra = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+            if bgra is None:
+                raise SystemExit(f"front layer {path} is missing: rerun the overlay step")
+            if fr.get("ovm"):
+                bgra = cv2.warpAffine(bgra, np.float32(fr["ovm"]), (W, H), flags=cv2.INTER_LINEAR,
+                                      borderMode=cv2.BORDER_CONSTANT, borderValue=0)
+            a = bgra[:, :, 3].astype(np.float32) / 255.0
+            if a.max() > 0:
+                img = cv2.blendLinear(img, np.ascontiguousarray(bgra[:, :, :3]), 1 - a, a)
+            return img
+        slots["front"] = front_slot
     sources = [FrameSource(src), FrameSource(src)]      # the second one feeds the incoming shot of a push
     enc = subprocess.Popen(
         ["ffmpeg", "-nostdin", "-v", "error", "-y",

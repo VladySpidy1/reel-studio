@@ -31,7 +31,8 @@
     "slow_push": true,
     "dead_span": 4.0,
     "vignette_max": 0.05,
-    "beat_cuts": true
+    "beat_cuts": true,
+    "occlusion": "warn"
   },
   "presets": {
     "hook": {"lines": {"scale": 1.5, "anim": "pop"}, "align": "center", "behind": false, "dur": 2.5, "fade": 0.2,
@@ -39,6 +40,8 @@
     "cta": {"lines": {"scale": 1.25, "anim": "pop"}, "align": "center", "behind": false, "hold": 2.0, "tail": 0.2,
             "fade": 0.2, "reveal": "block", "sfx": {"event": "cta"},
             "place": {"x": "center", "y": 900, "safe": [128, 860, 952, 1248], "avoid": "face"}},
+    "count_up": {"template": "count-up", "lines": {"literal": true, "scale": 2.5}, "align": "center", "behind": false,
+                 "dur": 2.5, "fade": 0.2, "place": {"x": "center"}},
     "interjection": {"lines": {"anim": "pop", "scale": 3}},
     "punchline": {"lines": {"scale": 1.55}},
     "brand_name": {"anim": "pop", "scale": 1.2},

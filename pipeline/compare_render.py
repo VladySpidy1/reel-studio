@@ -71,8 +71,8 @@ def main():
     print(f"loudness ours {lo[0]} LUFS (peak {lo[1]}), editor {lt[0]} LUFS (peak {lt[1]})")
 
     tl = load_json(BUILD / "timeline.json")
-    blocks = [(b["id"], sc["t0"], sc["t1"], " ".join(t["text"] for l in b["lines"] for t in l["tokens"]))
-              for sc in tl["screens"] for b in sc["blocks"]]
+    blocks = [(b["id"], b.get("t0", sc["t0"]), b.get("t1", sc["t1"]), " ".join(t["text"] for l in b["lines"] for t in l["tokens"]))
+              for sc in tl["screens"] for b in sc["blocks"]]          # a block window (hook, CTA) or its screen
     scores, keep = [], {}
     probes = {int(round((max(t0, min(t1 - 0.1, min(tok["t"] for sc in tl["screens"] for bb in sc["blocks"]
                                                     if bb["id"] == bid for l in bb["lines"] for tok in l["tokens"]) + 0.6))) * FPS))

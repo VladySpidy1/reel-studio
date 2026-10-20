@@ -37,8 +37,10 @@ def main():
     for sc in tl["screens"]:
         for b in sc["blocks"]:                      # one frame per block, right after it is fully typed
             t_last = max(tok["t"] for l in b["lines"] for tok in l["tokens"])
-            t_end = min(sc["t1"], b.get("until", 1e9))
+            t_end = b.get("t1", min(sc["t1"], b.get("until", 1e9)))          # a block window (hook, CTA) or its screen
             shots.append(min(t_end - 0.04, t_last + 0.4))
+            if b.get("preset"):                     # a hook or CTA card also as it pops
+                shots.append(min(t_end - 0.04, b.get("t0", sc["t0"]) + 0.3))
     cols, tw, th = (a.cols or 6, 360, 640) if a.full else sheet_grid(len(shots), 360, a.cols)
     for i, t in enumerate(sorted(shots)):
         im = grab(a.video, t)

@@ -1,0 +1,24 @@
+Reel Studio
+Copyright 2026 the Reel Studio authors
+
+This product includes work derived from HyperFrames (https://github.com/heygen-com/hyperframes),
+Copyright 2026 HeyGen, Inc., licensed under the Apache License, Version 2.0
+(http://www.apache.org/licenses/LICENSE-2.0):
+
+  - pipeline/overlay.html, the graphic templates "cta-lockup" and "count-up" (functions lockupSpec,
+    seekLockup, initCount, seekCount, affixLift and the EASE curves they use). They port the design,
+    reveal order, envelope timings, easing curves, affix styling and frame-stepped counting of
+    HyperFrames' registry components registry/components/cta-lockup/cta-lockup.html and
+    registry/components/count-up/count-up.html (read at commit 434ad8c, 2026-10-20). Changes: re-implemented
+    on overlay.html's own deterministic seek(t) instead of GSAP timelines, laid out with the brand's fonts
+    and colours and per-glyph pen positions (Cyrillic), sized for a 1080x1920 reel, number formatting for
+    Ukrainian (no-break-space digit groups, the typed decimal separator, hryvnia as a currency affix), the
+    capsule's text colour chosen by contrast, and drawn on the text front layer.
+  - pipeline/build_timeline.py, the readability checks: the per-word occlusion rule (one word at least 80 %
+    hidden, or two neighbouring words at least 50 % hidden) and the contrast check (WCAG ratio with a
+    compliant colour suggested; the luminance bands 60 and 180) follow the rules documented for
+    HyperFrames' `hyperframes check` (docs/packages/cli.mdx) and its embedded-captions skill. No code was
+    copied for these.
+
+The derived portions remain under the Apache License, Version 2.0 (full text in LICENSES/Apache-2.0.txt,
+copied from HyperFrames' LICENSE); the modified files say so where the derived code starts.

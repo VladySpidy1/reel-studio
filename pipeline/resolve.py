@@ -41,9 +41,11 @@ BRAND_KEYS = {"name", "aliases", "style", "colors", "terms", "censor", "cta_phra
               "sfx_banned", "lint", "presets"}
 FORMAT_KEYS = {"name", "aliases", "camera", "grade", "audio", "presets", "lint", "grammar", "cta_check", "style"}
 SCRIPT_KEYS = set(TYPES) - {"name", "aliases", "censor_sets"}
-LINT_KEYS = {"sfx_banned", "whoosh_on_cuts", "punch_min", "slow_push", "dead_span", "vignette_max", "beat_cuts"}
+LINT_KEYS = {"sfx_banned", "whoosh_on_cuts", "punch_min", "slow_push", "dead_span", "vignette_max", "beat_cuts",
+             "occlusion"}
 GRAMMAR_KEYS = {"trim", "speed_max", "insert"}
-PRESET_STRUCT = {"literal", "t", "until", "fade", "behind", "place", "dur", "hold", "tail", "reveal", "lines"}
+PRESET_STRUCT = {"literal", "t", "until", "fade", "behind", "place", "dur", "hold", "tail", "reveal", "lines",
+                 "template"}
 LINE_STRUCT = {"literal", "t"}
 MUSIC_FORMAT = {"fade_in", "fade_out", "duck"}
 
@@ -300,15 +302,9 @@ def summary(script):
 
 
 def display_tokens(script):
-    """The tokens every line shows, without timing (the glyph check of --check)."""
-    from build_timeline import tokenize
-    out = []
-    for sc in script.get("screens", []):
-        for b in sc.get("blocks") or [sc]:
-            for ln in b["lines"]:
-                spec = {"text": ln} if isinstance(ln, str) else ln
-                out.append(tokenize(spec["text"], spec.get("literal", False)))
-    return out
+    """The tokens every line shows, censored and cased, without timing (the glyph check of --check)."""
+    import text_rules
+    return text_rules.display_tokens(script)
 
 
 def main():

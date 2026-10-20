@@ -120,7 +120,7 @@ def render_layer(job):
     masks = np.load(masks_path, mmap_mode="r") if masks_path else None
     imgs = {}
     with sync_playwright() as p:
-        b = p.chromium.launch(channel="chrome", args=["--font-render-hinting=none", "--disable-lcd-text"])
+        b = p.chromium.launch(args=["--font-render-hinting=none", "--disable-lcd-text"])
         pg = b.new_page(viewport={"width": W, "height": H}, device_scale_factor=1)
         pg.goto((PIPE / "overlay.html").as_uri())
         pg.evaluate("tl => init(tl)", tl)
@@ -271,7 +271,8 @@ def main():
     name = a.name or reel_id(a.script)
     with studio_lock("export " + name):
         keep_awake()
-        require_slot(a.script, force=a.force)          # before anything is written: build/ must hold this script
+        require_slot(a.script, need_pass=True, force=a.force)   # before anything is written: build/ must hold this
+                                                                 # script, and its checks must pass
         with run_log(BUILD / reel_id(a.script) / "logs" / f"export_{name}.log", a.verbose):
             export(a, name)
 
@@ -493,10 +494,12 @@ def export(a, name):
     for sc in tl["screens"]:
         for b in sc["blocks"]:
             one = {**tl, "screens": [{**sc, "blocks": [b]}], "doodles": []}
-            f0 = max(0, int(sc["t0"] * FPS) - 1)
-            f1 = min(n_out, int(np.ceil((sc["t1"] + sc.get("fade", 0.3) + 0.1) * FPS)) + 1)
+            t0, t1 = b.get("t0", sc["t0"]), b.get("t1", sc["t1"])            # a block window (hook, CTA) or its screen
+            f0 = max(0, int(t0 * FPS) - 1)
+            f1 = min(n_out, int(np.ceil((t1 + sc.get("fade", 0.3) + 0.1) * FPS)) + 1)
             text = " ".join(t["text"] for l in b["lines"] for t in l["tokens"])
-            jobs.append((f"{b['id']}", one, list(range(f0, f1)), str(media / f"{b['id']}.mov"), occl, masks_path,
+            cut = set() if b.get("behind") is False else occl                  # front blocks are never cut by her matte
+            jobs.append((f"{b['id']}", one, list(range(f0, f1)), str(media / f"{b['id']}.mov"), cut, masks_path,
                          str(BUILD / "camera.json"), text))
     for k, d in enumerate(tl.get("doodles", [])):
         one = {**tl, "screens": [], "doodles": [d]}

@@ -11,6 +11,10 @@
   .mline { position: absolute; left: 0; top: 0; white-space: pre; line-height: normal; }
   #measure { position: absolute; left: 0; top: 0; visibility: hidden; }
   .debug { position: absolute; border: 2px dashed rgba(0,255,0,.8); box-sizing: border-box; pointer-events: none; }
+  .lgrp { position: absolute; left: 0; top: 0; }
+  .capsule { position: absolute; }
+  .cbox { position: absolute; left: 0; white-space: pre; line-height: normal; }
+  .cin { display: inline-block; }
 </style>
 </head>
 <body>
@@ -24,6 +28,10 @@
 // Letters are laid out in a normal text run (so kerning + tracking are exact), then each
 // glyph is cloned into an absolutely positioned span at its measured pen position so it can
 // be animated individually without changing the typography.
+// seek(t, layer): 'back' draws all but the behind:false blocks, 'front' only those (the
+// front layer, composited over her without the matte); no layer draws everything.
+// Graphic templates (blk.template): 'cta-lockup' and 'count-up', ported from HyperFrames
+// (Apache-2.0, see NOTICE) onto this file's own deterministic easing; no GSAP, no network.
 // ---------------------------------------------------------------------------
 let TL = null;
 let BLOCKS = [];      // {el, screen, chars:[{el, start, anim, baseline}], bbox}
@@ -137,20 +145,23 @@ async function init(timeline) {
     screen.blocks.forEach((blk) => {
       const el = document.createElement('div');
       el.className = 'block';
-      el.style.filter = S.shadow;
+      el.style.filter = blockFilter(blk, S);
       el.style.display = 'block';          // must be rendered while glyph baselines are measured
       stage.appendChild(el);
+      if (blk.template === 'count-up') { BLOCKS.push(initCount(el, blk, screen, S)); return; }
       const LH = S.main.size * (blk.leading || S.leading);
       const lines = blk.lines.map(l => layoutLine(l, S));
       const bw = Math.max(...lines.map((l, i) => l.width + (blk.lines[i].indent || 0) * S.main.size));
       const chars = [];
       let minTop = 1e9, maxBot = -1e9, minX = 1e9, maxX = -1e9, extra = 0;
+      const lock = blk.template === 'cta-lockup' ? lockupSpec(blk, S) : null;
       lines.forEach((ln, li) => {
         const spec = blk.lines[li];
         const indentPx = (spec.indent || 0) * S.main.size;
         const lineAlign = spec.align || blk.align || 'left';
-        let x0 = lineAlign === 'right' ? bw - ln.width - indentPx : indentPx;
-        if (lineAlign !== 'right' && ln.chars.length && '([«'.includes(ln.chars[0].c)) x0 -= ln.chars[0].w * 0.85;
+        let x0 = lineAlign === 'right' ? bw - ln.width - indentPx
+               : lineAlign === 'center' ? (bw - ln.width) / 2 + indentPx : indentPx;
+        if (lineAlign === 'left' && ln.chars.length && '([«'.includes(ln.chars[0].c)) x0 -= ln.chars[0].w * 0.85;
         // a scaled line pushes itself (and everything below it) down by its extra cap height
         const lineScale = Math.max(1, ...spec.tokens.map(t => t.scale || 1));
         extra += (lineScale - 1) * S.main.size * 0.74;
@@ -159,14 +170,25 @@ async function init(timeline) {
         const tall = tk => tk.kind === 'accent' || tk.kind === 'accent-white' || tk.kind === 'label';
         if (li > 0 && spec.tokens.some(tall)) extra += S.main.size * (S.accent_gap ?? 0.16);
         if (li > 0 && blk.lines[li - 1].tokens.some(tall)) extra += S.main.size * (S.accent_gap_after ?? 0.1);
+        let parent = el;
+        if (lock) {                        // lockup: one group per line, the capsule line padded
+          parent = document.createElement('div');
+          parent.className = 'lgrp';
+          el.appendChild(parent);
+          lock.groups.push(parent);
+          if (li === lock.btn && li > 0) extra += lock.padY + lock.gap;
+          if (li === lock.btn + 1) extra += lock.padY + lock.gap * 0.5;
+        }
         const baselineY = (spec.dy || 0) * S.main.size + li * LH + extra + (blk.first_baseline || S.main.size * 0.8);
+        const inBtn = lock && li === lock.btn;
         for (const ch of ln.chars) {
           if (ch.c === ' ') continue;
           const s = document.createElement('span');
           s.className = 'ch';
-          applyFont(s, ch.st);
+          const st = inBtn ? { ...ch.st, color: lock.ink, outline: 'none' } : ch.st;
+          applyFont(s, st);
           s.textContent = ch.c;
-          el.appendChild(s);
+          parent.appendChild(s);
           const b = baselineOf(s);
           const left = x0 + ch.x, top = baselineY - b;
           s.style.left = left + 'px';
@@ -176,7 +198,21 @@ async function init(timeline) {
           maxBot = Math.max(maxBot, baselineY + ch.st.size * 0.22);
           minX = Math.min(minX, left); maxX = Math.max(maxX, left + ch.w);
           chars.push({ el: s, tok: ch.tok, start: 0, kind: ch.tok.kind, left, top, w: ch.w, baselineY, size: ch.st.size,
-                       anim: ch.tok.anim || (ch.tok.kind === 'label' ? 'pop' : S.anim.kind) });
+                       anim: lock ? 'none' : ch.tok.anim || (ch.tok.kind === 'label' ? 'pop' : S.anim.kind),
+                       st, li, fill: !!inBtn });
+        }
+        if (inBtn && ln.chars.length) {    // the capsule behind the line, in the brand accent
+          const size = Math.max(...ln.chars.map(c => c.st.size));
+          const r = { x: x0 - lock.padX, y: baselineY - size * 0.74 - lock.padY, w: ln.width + 2 * lock.padX,
+                      h: size * 0.96 + 2 * lock.padY };
+          const cap = document.createElement('div');
+          cap.className = 'capsule';
+          Object.assign(cap.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px',
+                                     borderRadius: r.h / 2 + 'px', background: lock.fill });
+          parent.insertBefore(cap, parent.firstChild);
+          lock.cap = { ...r, cx: r.x + r.w / 2, cy: r.y + r.h / 2 };
+          minTop = Math.min(minTop, r.y); maxBot = Math.max(maxBot, r.y + r.h);
+          minX = Math.min(minX, r.x); maxX = Math.max(maxX, r.x + r.w);
         }
       });
       // pop animations scale whole words around the word centre
@@ -201,11 +237,219 @@ async function init(timeline) {
       el.style.left = bx + 'px';
       el.style.top = by + 'px';
       el.style.display = 'none';
-      BLOCKS.push({ el, screen, blk, chars, bbox: { x: bx + minX, y: by + minTop, w: maxX - minX, h: maxBot - minTop } });
+      if (lock) {                          // groups scale and drift around their own centres
+        lock.groups.forEach((g, li) => {
+          const cs = chars.filter(c => c.li === li);
+          const cx = li === lock.btn && lock.cap ? lock.cap.cx : cs.length ? (Math.min(...cs.map(c => c.left)) +
+                     Math.max(...cs.map(c => c.left + c.w))) / 2 : 0;
+          const cy = li === lock.btn && lock.cap ? lock.cap.cy : cs.length ? cs[0].baselineY - cs[0].size * 0.33 : 0;
+          g.style.transformOrigin = `${cx}px ${cy}px`;
+        });
+      }
+      BLOCKS.push({ el, screen, blk, chars, lock, bbox: { x: bx + minX, y: by + minTop, w: maxX - minX, h: maxBot - minTop } });
     });
   });
   initDoodles(TL.doodles || [], S);
   return true;
+}
+
+// ----------------------------------------------------------------------------- block outline (stroke)
+const SVGNS_FX = 'http://www.w3.org/2000/svg';
+
+function strokeFilter(sk) {                // a real outline: alpha dilated by px, flooded, under the glyphs
+  const px = Math.min(4, sk.px || 3), color = sk.color || '#171717';
+  const id = `stk${px}_${color.replace(/[^0-9a-z]/gi, '')}`;
+  if (!document.getElementById(id)) {
+    let defs = document.getElementById('fxdefs');
+    if (!defs) {
+      defs = document.createElementNS(SVGNS_FX, 'svg');
+      defs.id = 'fxdefs';
+      Object.assign(defs.style, { position: 'absolute', width: 0, height: 0 });
+      document.body.appendChild(defs);
+    }
+    const f = document.createElementNS(SVGNS_FX, 'filter');
+    f.id = id;
+    for (const [k, v] of Object.entries({ filterUnits: 'userSpaceOnUse', x: -2200, y: -2200, width: 4400, height: 4400,
+                                          'color-interpolation-filters': 'sRGB' })) f.setAttribute(k, v);
+    f.innerHTML = `<feMorphology in="SourceAlpha" operator="dilate" radius="${px}" result="d"/>` +
+                  `<feFlood flood-color="${color}" result="c"/><feComposite in="c" in2="d" operator="in" result="o"/>` +
+                  `<feMerge><feMergeNode in="o"/><feMergeNode in="SourceGraphic"/></feMerge>`;
+    defs.appendChild(f);
+  }
+  return `url(#${id})`;
+}
+
+function blockFilter(blk, S) {
+  return blk.stroke ? strokeFilter(blk.stroke) + ' ' + S.shadow : S.shadow;
+}
+
+// ----------------------------------------------------------------------------- easing (GSAP's curves, closed form)
+const EASE = {
+  linear: p => p,
+  power2out: p => 1 - Math.pow(1 - p, 3),
+  power3out: p => 1 - Math.pow(1 - p, 4),
+  sineInOut: p => -(Math.cos(Math.PI * p) - 1) / 2,
+  backOut: (p, s = 1.7) => 1 + (s + 1) * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2),
+};
+
+// value of a tween from v0 to v1 that starts at `at` and lasts `dur`, at local time u
+function tween(u, at, dur, v0, v1, ease) {
+  const p = dur > 0 ? Math.min(1, Math.max(0, (u - at) / dur)) : (u >= at ? 1 : 0);
+  return v0 + (v1 - v0) * ease(p);
+}
+
+// a yoyo drift: 0 -> d -> 0 over `dur` from `at` (sine in-out each way)
+function drift(u, at, dur, d) {
+  if (dur <= 0 || u <= at) return 0;
+  const q = Math.min(2, (u - at) / (dur / 2));
+  return d * EASE.sineInOut(q <= 1 ? q : 2 - q);
+}
+
+function relLum(color) {                   // WCAG relative luminance of #rgb / #rrggbb
+  let h = (color || '').replace('#', '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  if (!/^[0-9a-f]{6}$/i.test(h)) return 1;
+  const ch = [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16) / 255)
+    .map(c => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+}
+
+function contrast(a, b) {
+  const la = relLum(a), lb = relLum(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+// ----------------------------------------------------------------------------- template: cta-lockup
+// After HyperFrames' cta-lockup (Apache-2.0, see NOTICE): the action line rises in, the capsule (the code word, in the
+// brand accent) pops under it with a restrained overshoot, the microcopy settles last, then the
+// lockup holds with one barely visible drift. IN is 1.6 s, compressed when the card is shorter.
+// The capsule is line "button": true, else the second line (the only line of a one-line card).
+function lockupSpec(blk, S) {
+  const n = blk.lines.length;
+  let btn = blk.lines.findIndex(l => l.button);
+  if (btn < 0) btn = Math.min(1, n - 1);
+  const fill = blk.lines[btn].color || S.accent.color;
+  const ink = contrast(S.main.color, fill) >= contrast('#171717', fill) ? S.main.color : '#171717';
+  const size = S.main.size * Math.max(1, ...blk.lines[btn].tokens.map(t => t.scale || 1));
+  return { btn, fill, ink, padX: size * 0.55, padY: size * 0.3, gap: S.main.size * 0.18, groups: [], cap: null };
+}
+
+function seekLockup(B, t, t0, t1) {
+  const L = B.lock, size = TL.style.main.size;
+  const e = Math.min(1, Math.max(0.001, (t1 - t0) / 1.6)), IN = 1.6 * e, u = t - t0;
+  const hold = drift(u, IN, Math.max(0, t1 - t0 - IN), -0.07 * size);
+  L.groups.forEach((g, li) => {
+    let o = 1, y = 0, s = 1;
+    if (li < L.btn) {
+      o = tween(u, 0, 0.5 * e, 0, 1, EASE.power3out);
+      y = tween(u, 0, 0.5 * e, 0.45 * size, 0, EASE.power3out);
+    } else if (li === L.btn) {
+      o = tween(u, 0.56 * e, 0.24 * e, 0, 1, EASE.power2out);
+      s = tween(u, 0.56 * e, 0.6 * e, 0.72, 1, EASE.backOut);
+      y = tween(u, 0.56 * e, 0.6 * e, 0.3 * size, 0, EASE.backOut);
+    } else {
+      o = tween(u, 1.18 * e, 0.42 * e, 0, 1, EASE.power2out);
+      y = tween(u, 1.18 * e, 0.42 * e, 0.25 * size, 0, EASE.power2out);
+    }
+    g.style.opacity = o;
+    g.style.transform = `translate(0px, ${y + hold}px) scale(${s})`;
+  });
+}
+
+
+// ----------------------------------------------------------------------------- template: count-up
+// After HyperFrames' count-up (Apache-2.0, see NOTICE): the number arrives (fade, rise, 0.98 -> 1), counts from
+// blk.count_from (default 0) to the line's number on a sine in-out curve stepped per frame,
+// lands with one scale pulse at 1.72 s, then holds with a slight drift. Text around the number
+// ("-", "%", "продуктів") is the affix: 0.55 em in the number's colour mixed 72/28 with the
+// main colour; a lone currency or math sign is lifted to the figures' optical centre (vertical-align: a
+// position: relative span under the pulsing scale paints differently after other frames, so seek would
+// depend on the frames rendered before). Digit groups ("10 000") count with a no-break space; decimals keep
+// the typed separator.
+const COUNT_RE = /^(\D*?)(\d{1,3}(?:\u00a0\d{3})+|\d+(?:[.,]\d+)?)(.*)$/;
+
+function affixLift(text) {
+  if (/^[$€£¥₹₩₴]$/.test(text)) return '0.31em';
+  if (/^[+−±×=~<>-]+$/.test(text)) return '0.36em';
+  return '';
+}
+
+function initCount(el, blk, screen, S) {
+  const spec = blk.lines[0], toks = spec.tokens;
+  const k = Math.max(0, toks.findIndex(t => /\d/.test(t.text)));
+  const m = toks[k].text.match(COUNT_RE) || ['', '', '0', toks[k].text];
+  const typed = m[2], grouped = typed.includes('\u00a0');
+  const dec = (typed.split(/[.,]/)[1] || '').length, sep = typed.includes(',') ? ',' : '.';
+  const end = parseFloat(typed.replace(/\u00a0/g, '').replace(',', '.')), start = blk.count_from ?? 0;
+  const fmt = v => {
+    let [i, f] = Math.abs(v).toFixed(dec).split('.');
+    if (grouped) i = i.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
+    return (v < 0 ? '−' : '') + i + (f ? sep + f : '');
+  };
+  const st = styleFor(toks[k].kind, S, toks[k]);
+  const align = spec.align || blk.align || 'left';
+  const box = document.createElement('div');
+  box.className = 'cbox';
+  box.style.textAlign = align;
+  const inner = document.createElement('span');
+  inner.className = 'cin';
+  box.appendChild(inner);
+  el.appendChild(box);
+  const affix = (text, tst) => {
+    const s = document.createElement('span');
+    applyFont(s, tst);
+    s.style.fontSize = tst.size * 0.55 + 'px';
+    s.style.color = `color-mix(in srgb, ${tst.color} 72%, ${S.main.color})`;
+    const lift = affixLift(text.trim());
+    if (lift) s.style.verticalAlign = lift;
+    s.textContent = text;
+    inner.appendChild(s);
+  };
+  let value = null;
+  toks.forEach((tok, i) => {
+    const tst = styleFor(tok.kind, S, tok);
+    if (i > 0 && !tok.glue) affix(' ', tst);
+    if (i !== k) { affix(tok.text, tst); return; }
+    if (m[1]) affix(m[1], tst);
+    value = document.createElement('span');
+    applyFont(value, st);
+    value.style.fontVariantNumeric = 'tabular-nums';
+    value.style.fontFeatureSettings = '"tnum" 1';
+    inner.appendChild(value);
+    if (m[3]) affix(m[3], tst);
+  });
+  const widths = [start, end].map(v => { value.textContent = fmt(v); return inner.getBoundingClientRect().width; });
+  const bw = Math.max(...widths);
+  box.style.width = bw + 'px';
+  const lineScale = Math.max(1, ...toks.map(t => t.scale || 1));
+  const baselineY = (spec.dy || 0) * S.main.size + (lineScale - 1) * S.main.size * 0.74 +
+                    (blk.first_baseline || S.main.size * 0.8);
+  box.style.top = baselineY - baselineOf(box) + 'px';
+  inner.style.transformOrigin = '50% 58%';
+  const bx = blk.x || 0, by = blk.y || 0;
+  el.style.left = bx + 'px';
+  el.style.top = by + 'px';
+  el.style.display = 'none';
+  const bbox = { x: bx, y: by + baselineY - st.size * 0.74, w: bw, h: st.size * 0.96 };
+  const word = { x: bbox.x - bx, y: bbox.y - by, w: bbox.w, h: bbox.h, t: toks[k].t, color: st.color,
+                 text: toks.map(t => t.text).join(' ') };
+  return { el, screen, blk, chars: [], bbox, count: { inner, value, fmt, start, end, size: st.size, word } };
+}
+
+function seekCount(B, t, t0, t1) {
+  const C = B.count, D = Math.max(0.001, t1 - t0), u = t - t0;
+  const k = D < 2.05 ? D / 2.05 : 1;
+  const COUNT = 1.72 * k, PH = 0.165 * k, ARR = 0.38 * k, IN = 2.05 * k;
+  const last = Math.max(1, Math.round(COUNT * 30));
+  const row = Math.min(last, Math.max(0, Math.floor(u / COUNT * last + 1e-6)));
+  C.value.textContent = C.fmt(C.start + (C.end - C.start) * EASE.sineInOut(row / last));
+  const o = tween(u, 0, ARR, 0, 1, EASE.power2out);
+  const y = tween(u, 0, ARR, 0.12 * C.size, 0, EASE.power3out) + drift(u, IN, Math.max(0, D - IN - 0.25), -0.03 * C.size);
+  let s = tween(u, 0, ARR, 0.98, 1, EASE.power3out);
+  if (u >= COUNT) s = u < COUNT + PH ? tween(u, COUNT, PH, 1, 1.07, EASE.power3out)
+                                     : tween(u, COUNT + PH, PH, 1.07, 1, EASE.power2out);
+  C.inner.style.opacity = o;
+  C.inner.style.transform = `translate(0px, ${y}px) scale(${s})`;
 }
 
 // ----------------------------------------------------------------------------- doodles (hand-drawn SVG)
@@ -354,15 +598,18 @@ function charTransform(ch, dt, A) {
   return { o: kf([[0, 0.7], [0.2, 1]], p), tr: `skewX(${sk}deg) scale(${sx}, ${sy})` };
 }
 
-function seek(t) {
+function seek(t, layer) {
   const A = TL.style.anim;
   for (const B of BLOCKS) {
-    const t1 = Math.min(B.screen.t1, B.blk.until ?? 1e9);
-    const on = t >= B.screen.t0 && t < t1;
+    // a block window (t0/t1: hook, CTA, dur/hold/tail) or its screen's
+    const t0 = B.blk.t0 ?? B.screen.t0, t1 = B.blk.t1 ?? Math.min(B.screen.t1, B.blk.until ?? 1e9);
+    const front = B.blk.behind === false;
+    const on = t >= t0 && t < t1 && !(layer === 'back' && front) && !(layer === 'front' && !front);
     B.el.style.display = on ? 'block' : 'none';
     if (!on) continue;
     const fade = B.blk.fade ?? B.screen.fade ?? 0;
     B.el.style.opacity = fade ? Math.min(1, (t1 - t) / fade) : 1;
+    if (B.count) { seekCount(B, t, t0, t1); continue; }
     for (const ch of B.chars) {
       const dt = t - ch.start;
       if (dt < 0) { ch.el.style.visibility = 'hidden'; continue; }
@@ -371,14 +618,85 @@ function seek(t) {
       ch.el.style.opacity = o;
       ch.el.style.transform = tr;
     }
+    if (B.lock) seekLockup(B, t, Math.min(...B.chars.map(c => c.start)), t1);
   }
+  const svg = document.getElementById('doodles');
+  if (svg) svg.style.display = layer === 'front' ? 'none' : '';
   seekDoodles(t);
   return true;
 }
 
-// Block sizes for the Python layout solver (blocks rendered at x=y=0 in measure mode).
+// ----------------------------------------------------------------------------- measure (layout and text checks)
+function fontOf(st) {
+  return `${st.italic ? 'italic ' : ''}${st.weight} ${st.size}px '${st.family}'`;
+}
+
+// Ink rectangles of a block's glyphs at rest (canvas actualBoundingBox, plus the stroke), relative to the block
+// origin, and the pixels where letters of different lines overlap (both alphas >= 128). Serif labels are
+// left out of the overlap count: canvas ignores their "lnum"/"case" features.
+function inkChecks(B) {
+  const cv = document.createElement('canvas'), ctx = cv.getContext('2d', { willReadFrequently: true });
+  const sp = Math.min(4, (B.blk.stroke || {}).px || 0);
+  const glyphs = B.chars.map(ch => {
+    ctx.font = fontOf(ch.st);
+    const m = ctx.measureText(ch.el.textContent);
+    return { ch, x0: ch.left - m.actualBoundingBoxLeft - sp, x1: ch.left + m.actualBoundingBoxRight + sp,
+             y0: ch.baselineY - m.actualBoundingBoxAscent - sp, y1: ch.baselineY + m.actualBoundingBoxDescent + sp };
+  });
+  if (!glyphs.length) return { ink: null, collisions: [] };
+  const box = gs => ({ x0: Math.min(...gs.map(g => g.x0)), y0: Math.min(...gs.map(g => g.y0)),
+                       x1: Math.max(...gs.map(g => g.x1)), y1: Math.max(...gs.map(g => g.y1)) });
+  const all = box(glyphs);
+  const lines = [...new Set(glyphs.map(g => g.ch.li))].map(li => {
+    const gs = glyphs.filter(g => g.ch.li === li && g.ch.kind !== 'label');
+    return { li, gs, r: gs.length ? box(gs) : null };
+  });
+  const collisions = [];
+  const alpha = (gs, r, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    for (const g of gs) { ctx.font = fontOf(g.ch.st); ctx.fillText(g.ch.el.textContent, g.ch.left - r.x0, g.ch.baselineY - r.y0); }
+    const d = ctx.getImageData(0, 0, w, h).data, a = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) a[i] = d[4 * i + 3];
+    return a;
+  };
+  for (let i = 0; i < lines.length; i++) {
+    for (let j = i + 1; j < lines.length; j++) {
+      const A = lines[i].r, C = lines[j].r;
+      if (!A || !C) continue;
+      const r = { x0: Math.floor(Math.max(A.x0, C.x0)), y0: Math.floor(Math.max(A.y0, C.y0)),
+                  x1: Math.ceil(Math.min(A.x1, C.x1)), y1: Math.ceil(Math.min(A.y1, C.y1)) };
+      const w = r.x1 - r.x0, h = r.y1 - r.y0;
+      if (w <= 0 || h <= 0) continue;
+      cv.width = w; cv.height = h;
+      ctx.fillStyle = '#000';
+      ctx.textBaseline = 'alphabetic';
+      const a = alpha(lines[i].gs, r, w, h), b = alpha(lines[j].gs, r, w, h);
+      let n = 0;
+      for (let k = 0; k < a.length; k++) if (a[k] >= 128 && b[k] >= 128) n++;
+      if (n) collisions.push([lines[i].li, lines[j].li, n]);
+    }
+  }
+  return { ink: { x: all.x0, y: all.y0, w: all.x1 - all.x0, h: all.y1 - all.y0 }, collisions };
+}
+
+// The words of a block (one box per token, at rest, relative to the block origin) with their reveal time and
+// colour; "fill" marks words drawn on their own capsule.
+function wordsOf(B) {
+  if (B.count) return [B.count.word];
+  const byTok = new Map();
+  for (const ch of B.chars) { if (!byTok.has(ch.tok)) byTok.set(ch.tok, []); byTok.get(ch.tok).push(ch); }
+  return [...byTok.entries()].filter(([tok]) => tok.kind !== 'deco' && tok.kind !== 'label').map(([tok, cs]) => {
+    const x0 = Math.min(...cs.map(c => c.left)), x1 = Math.max(...cs.map(c => c.left + c.w));
+    const y0 = Math.min(...cs.map(c => c.baselineY - c.size * 0.74)), y1 = Math.max(...cs.map(c => c.baselineY + c.size * 0.22));
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0, t: Math.min(...cs.map(c => c.start)), text: tok.text,
+             color: cs[0].st.color, fill: cs[0].fill };
+  });
+}
+
+// Block sizes for the Python layout solver (blocks rendered at x=y=0 in measure mode), plus the text checks' data.
 function measure() {
-  return BLOCKS.map(B => ({ id: B.blk.id, bbox: B.bbox, x: B.blk.x || 0, y: B.blk.y || 0 }));
+  return BLOCKS.map(B => ({ id: B.blk.id, bbox: B.bbox, x: B.blk.x || 0, y: B.blk.y || 0, words: wordsOf(B),
+                            ...(B.count ? { ink: null, collisions: [] } : inkChecks(B)) }));
 }
 
 function debugBoxes() {

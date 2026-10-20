@@ -1,9 +1,10 @@
 #!/bin/zsh
 # One-time setup of the reel pipeline on an Apple Silicon Mac (ADR-0005).
 #   zsh pipeline/setup_mac.sh
-# Installs Homebrew ffmpeg and uv if missing, checks Google Chrome, creates .venv with the locked Python
-# deps, then downloads the models (whisper large-v3 ~3 GB, RVM resnet50 ~100 MB) so the first batch
-# does not stall on downloads. Safe to re-run.
+# Installs Homebrew ffmpeg and uv if missing, creates .venv with the locked Python deps, installs the
+# Chromium build the locked playwright pins (the subtitle renderer; Google Chrome is not needed), then
+# downloads the models (whisper large-v3 ~3 GB, RVM resnet50 ~100 MB) so the first batch does not stall
+# on downloads. Safe to re-run.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -14,13 +15,11 @@ brew list ffmpeg >/dev/null 2>&1 || brew install ffmpeg
 command -v uv >/dev/null || brew install uv
 ffmpeg -hide_banner -encoders 2>/dev/null | grep -q prores_ks || { echo "ffmpeg lacks prores_ks" >&2; exit 1; }
 
-if [[ ! -d "/Applications/Google Chrome.app" ]]; then
-  echo "Google Chrome is missing (the subtitle renderer drives it headless): install it from google.com/chrome" >&2
-  exit 1
-fi
-
 uv venv .venv --python 3.12 --allow-existing
 VIRTUAL_ENV=.venv uv pip install -r pipeline/requirements.lock.txt
+# the renderer: Playwright's own Chromium, pinned by the locked playwright version, so subtitles render the same
+# until the lock changes (a self-updating Chrome would shift the text rendering)
+.venv/bin/python -m playwright install chromium
 
 .venv/bin/python - <<'EOF'
 import torch

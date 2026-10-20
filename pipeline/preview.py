@@ -25,7 +25,7 @@ def source_frame(src, t):
 
 
 def open_page(p, timeline):
-    b = p.chromium.launch(channel="chrome", args=["--font-render-hinting=none", "--disable-lcd-text"])
+    b = p.chromium.launch(args=["--font-render-hinting=none", "--disable-lcd-text"])
     pg = b.new_page(viewport={"width": W, "height": H}, device_scale_factor=1)
     pg.goto((PIPE / "overlay.html").as_uri())
     pg.evaluate("tl => init(tl)", timeline)
