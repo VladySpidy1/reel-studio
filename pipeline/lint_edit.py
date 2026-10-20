@@ -7,13 +7,16 @@ amateur: blips, pumping, mismatched whip speeds, whooshes on plain cuts, dead sp
 times. Exit code 1 when anything FAILs. It only reads the script, the EDL and the camera path; it does not judge
 taste (which shot, which word) - that stays with the editor. The thresholds and bans are the resolved script's lint
 profile (pipeline/studio_default.json "lint", changed by the brand and the format); a brand's sfx_banned always
-applies.
+applies. The text, insert and audio checks of their own modules run through HOOKS, and the sound checks cover their
+automatic cues too.
 """
+import importlib
 import re
 import sys
 from fnmatch import fnmatch
 from pathlib import Path
 
+import assets
 import camera as cam
 import resolve
 from common import FPS, ROOT, load_json
@@ -23,6 +26,10 @@ E_HELD, E_MOVING = 1.2, 1.65          # max upscale on a held frame / on a motio
 MIN_GAP = 15                          # frames between two event moves
 WHOOSH = re.compile(r"whoosh|swish|swoosh")
 DESIGNED = ("push", "zoom_through", "spin")
+# the features' own checks, (module, function): function(script, ctx) -> (fails, warns), lists of (t, msg); ctx has
+# the edl, the output takes, the camera frames and the cue list ("cues"), which the check may extend. A module or
+# function that does not exist yet is skipped.
+HOOKS = (("text_rules", "lint_text"), ("inserts", "lint_inserts"), ("trim", "lint_audio"))
 
 
 def takes_out(script, edl):
@@ -138,8 +145,23 @@ def lint(script):
         if o1 - o0 > 1.5 and o1 < edl.duration - 0.5:
             warn(o0, f"freeze {o1 - o0:.1f} s mid-reel; keep it under 1.5 s")
 
+    # feature checks (HOOKS): each adds its (t, msg) FAILs and WARNs and puts its automatic cues (CTA chime, insert
+    # pops and whooshes, "move": true) on the cue list, so the sound checks below see every cue the mix will play
+    ctx = {"edl": edl, "takes": takes, "frames": frames, "cues": list(script.get("audio", {}).get("sfx", []))}
+    for mod, fn in HOOKS:
+        try:
+            check = getattr(importlib.import_module(mod), fn, None)
+        except ModuleNotFoundError as e:
+            if e.name != mod:
+                raise
+            check = None
+        if check:                     # until that feature lands
+            more_fails, more_warns = check(script, ctx)
+            fails += more_fails
+            warns += more_warns
+
     # sound: every designed transition gets its sound on the cut, plain cuts get none
-    sfx = script.get("audio", {}).get("sfx", [])
+    sfx = ctx["cues"]
     tr_at = [tr["at"] for tr in trs]
     for tr in trs:
         if not any(-1 <= round((x["peak_at"] - tr["at"]) * FPS) <= 3 for x in sfx):
@@ -171,11 +193,11 @@ def lint(script):
         warn(0, f"vignette above {P['vignette_max']} reads as a filter")
 
     music = script.get("audio", {}).get("music")
-    m = re.search(r"(\d+)bpm", (music or {}).get("file", ""))
-    if m and P["beat_cuts"]:                  # off where cuts follow speech, not beats (talking head)
+    path = assets.find("music", music["file"]) if music and music.get("file") else None
+    bpm = assets.music_info(path)["bpm"] if path else None
+    if bpm and P["beat_cuts"]:                # off where cuts follow speech, not beats (talking head)
         import beats
-        bpm = int(m.group(1))
-        phase = beats.beat_phase(ROOT / "assets" / "music" / music["file"], bpm)
+        phase = beats.beat_phase(path, bpm)
         period = 60 / bpm
         miss = [(c, abs(((c + music.get("offset", 0) - phase + period / 2) % period) - period / 2)) for c in cuts]
         late = [(c, d) for c, d in miss if d > 2.5 / FPS]

@@ -10,7 +10,8 @@ centre-cropped, variable frame rate is resampled to 30 fps. Holds the studio loc
 Writes to out_dir:
   media/<clip>.mov   intermediate media, one per clip
   source.ffconcat    the clips back to back; use it as the script's "source"
-  clips.json         {"fps", "clips": [{"name", "orig", "file", "offset", "duration", "n_frames"}]}
+  clips.json         {"fps", "clips": [{"name", "orig", "file", "offset", "duration", "n_frames", "speed",
+                                         "orig_duration"}]}   (orig_duration: seconds before a speed-up)
 """
 import argparse
 import json
@@ -30,7 +31,7 @@ def probe(path):
     d = json.loads(out)
     v = next(s for s in d["streams"] if s["codec_type"] == "video")
     a = next((s for s in d["streams"] if s["codec_type"] == "audio"), None)
-    return v, a, float(d["format"]["duration"])
+    return v, a, float(d["format"].get("duration") or 0)          # stills (PNG, HEIC, WebP) have none
 
 
 def video_duration(v, fmt_dur):
@@ -52,20 +53,30 @@ def start_time(stream):
     return float(stream.get("start_time") or 0.0) if stream else 0.0
 
 
-def ingest(clip, media_dir, name):
+def ffmpeg_cmd(clip, out, audio=True, focus=None, trim=None, speed=1.0):
+    """(the ffmpeg command that makes the intermediate `out` from `clip`, its frame count). audio=False: picture only.
+    focus (fx, fy), 0..1: where the cover crop sits (default: the centre). trim [t0, t1]: only that source window.
+    speed k: played k times faster (picture retimed, sound through atempo), n = trimmed length / k x FPS frames.
+    With the defaults the command is the one ingest has always run."""
     v, a, fmt_dur = probe(clip)
     if v.get("color_transfer") in HDR_TRC:
         raise SystemExit(f"{clip.name}: HDR video ({v['color_transfer']}). Turn off HDR Video on the iPhone "
                          f"(ADR-0006); HDR->SDR tone-mapping is not implemented yet.")
-    n = int(round(video_duration(v, fmt_dur) * FPS))
-    dur = n / FPS
-    out = media_dir / f"{name}.mov"
+    length, seek = video_duration(v, fmt_dur), []
+    if trim:
+        length = min(trim[1], length) - trim[0]
+        seek = ["-ss", f"{trim[0]:.6f}", "-t", f"{length:.6f}"]
+    n = int(round(length / speed * FPS))
     # both streams are rebased to the first video frame, so every clip starts at 0 inside the concat
-    vf = (f"setpts=PTS-STARTPTS,fps={FPS},scale={W}:{H}:force_original_aspect_ratio=increase"
+    pts = "PTS-STARTPTS" if speed == 1.0 else f"(PTS-STARTPTS)/{speed:g}"
+    crop = "" if not focus or tuple(focus) == (0.5, 0.5) else f":(iw-ow)*{focus[0]:g}:(ih-oh)*{focus[1]:g}"
+    vf = (f"setpts={pts},fps={FPS},scale={W}:{H}:force_original_aspect_ratio=increase"
           f":flags=lanczos+accurate_rnd+full_chroma_int:in_color_matrix=bt709:out_color_matrix=bt709,"
-          f"crop={W}:{H},setsar=1,format=yuv422p10le")
-    cmd = ["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(clip)]
-    if a:
+          f"crop={W}:{H}{crop},setsar=1,format=yuv422p10le")
+    cmd = ["ffmpeg", "-nostdin", "-v", "error", "-y", *seek, "-i", str(clip)]
+    if not audio:
+        amap = None
+    elif a:
         lead = start_time(a) - start_time(v)          # > 0: sound starts after the first frame
         shift = f"adelay={int(round(lead * 1000))}:all=1," if lead > 0.0005 else \
                 f"atrim=start={-lead:.6f},asetpts=PTS-STARTPTS," if lead < -0.0005 else ""
@@ -74,15 +85,28 @@ def ingest(clip, media_dir, name):
         cmd += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
         amap, af = "1:a:0", ""
     cmd += ["-map", "0:v:0", "-vf", vf, "-frames:v", str(n), "-c:v", "prores_ks", "-profile:v", "3", "-vendor", "apl0",
-            "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv",
-            # pad/trim so the audio ends exactly with the last frame (1600 samples per frame at 30 fps)
-            "-map", amap, "-af", f"{af}apad,atrim=end_sample={n * 48000 // FPS}", "-ac", "2", "-c:a", "pcm_s24le",
-            "-map_metadata", "0", "-movflags", "+write_colr", str(out)]
+            "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv"]
+    if amap:
+        if speed != 1.0:                              # after the start shift (source time), before the end trim
+            af += f"atempo={speed:g},"
+        # pad/trim so the audio ends exactly with the last frame (1600 samples per frame at 30 fps)
+        cmd += ["-map", amap, "-af", f"{af}apad,atrim=end_sample={n * 48000 // FPS}", "-ac", "2", "-c:a", "pcm_s24le"]
+    else:
+        cmd += ["-an"]
+    cmd += ["-map_metadata", "0", "-movflags", "+write_colr", str(out)]
+    return cmd, n
+
+
+def ingest(clip, media_dir, name, audio=True, focus=None, trim=None, speed=1.0):
+    """Make media_dir/<name>.mov from clip (see ffmpeg_cmd for the options); its clips.json entry."""
+    out = media_dir / f"{name}.mov"
+    cmd, n = ffmpeg_cmd(clip, out, audio, focus, trim, speed)
     subprocess.run(cmd, check=True)
     got = count_frames(out)
     if got != n:
         raise SystemExit(f"{clip.name}: expected {n} frames, got {got}")
-    return {"name": name, "orig": str(clip), "file": f"media/{out.name}", "duration": round(dur, 6), "n_frames": n}
+    return {"name": name, "orig": str(clip), "file": f"media/{out.name}", "duration": round(n / FPS, 6), "n_frames": n,
+            "speed": speed, "orig_duration": round(n * speed / FPS, 6)}
 
 
 def count_frames(path, demux=()):

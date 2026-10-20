@@ -19,13 +19,7 @@ def main(path):
     voice = VoiceMap(edl, sc.get("audio"))
     for w in voice.warnings:
         print("WARNING", w)
-    words = []
-    for s in load_json(ROOT / sc["words"])["segments"]:
-        for w in s["words"]:
-            t = voice.word_time(w)
-            if t is not None:
-                words.append({**w, "o": t, "oe": t + w["e"] - w["s"]})
-    words.sort(key=lambda w: w["o"])
+    words = voice.heard_words(load_json(ROOT / sc["words"]))
     takes = [(edl.out_time(a), edl.out_time(b)) for a, b in sc["takes"]]
     print(f"output duration {edl.duration:.3f}s  (edl: {sc.get('edl')})")
     for k, (oa, ob) in enumerate(takes):

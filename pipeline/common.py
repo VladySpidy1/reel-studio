@@ -211,6 +211,12 @@ def sheet_grid(n, tile_w, cols=None, edge=SHEET_EDGE):
     return best[0], best[1], best[1] * 16 // 9
 
 
+def norm(w):
+    """A word as the transcript and the script are matched: lowercase, punctuation dropped (hyphens and
+    apostrophes stay inside the word)."""
+    return re.sub(r"[^\w\-ʼ'’]", "", w.lower()).strip("-")
+
+
 def source_path(script):
     """The reel's source video (repo-relative in script.json): a 1080x1920 30 fps file, usually the
     source.ffconcat written by ingest.py."""

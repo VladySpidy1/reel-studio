@@ -9,7 +9,11 @@ B-roll under a line, a line laid over the right product shot):
   voice_over: [{"src": [a, b], "at": out_t, "gain_db": 0}]   source sound a..b heard from output time out_t
   mute:       [[t0, t1], ...]                                 output ranges where the picture's sound is off
 """
+import re
+
 from common import FPS
+
+SENTENCE_END = re.compile(r"[.!?…][\"'’”»)]*\s*$")       # a transcript word that ends a sentence
 
 
 class EDL:
@@ -105,3 +109,29 @@ class VoiceMap:
         mid = (w["s"] + w["e"]) / 2
         h = self._heard(mid)
         return None if h is None else max(h[1], h[0] - (mid - w["s"]))
+
+    def heard_words(self, words_json):
+        """The heard transcript words (words.json) in output order: {w, s, e, p, o, oe, sentence_end} with the
+        source start/end s/e, the output start/end o/oe and whether the word ends a sentence (. ! ? …)."""
+        out = []
+        for seg in words_json["segments"]:
+            for w in seg["words"]:
+                o = self.word_time(w)
+                if o is not None:
+                    out.append({"w": w["w"], "s": w["s"], "e": w["e"], "p": w.get("p"), "o": o,
+                                "oe": o + w["e"] - w["s"], "sentence_end": bool(SENTENCE_END.search(w["w"]))})
+        out.sort(key=lambda w: w["o"])
+        return out
+
+
+def speech_spans(heard, hang=0.2, join=0.8):
+    """Output-time spans [a, b] of speech: each heard word from its start to its end + hang, merged across
+    gaps shorter than join."""
+    spans = []
+    for w in sorted(heard, key=lambda w: w["o"]):
+        a, b = w["o"], w["oe"] + hang
+        if spans and a - spans[-1][1] < join:
+            spans[-1][1] = max(spans[-1][1], b)
+        else:
+            spans.append([a, b])
+    return spans

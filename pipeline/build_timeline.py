@@ -25,13 +25,9 @@ import camera as cam
 import fontcheck
 import resolve
 from edl import EDL, VoiceMap
-from common import FPS, H, PIPE, ROOT, W, load_json, save_json
+from common import FPS, H, PIPE, ROOT, W, load_json, norm, save_json
 
 Q = 4  # masks are quarter resolution
-
-
-def norm(w):
-    return re.sub(r"[^\w\-ʼ'’]", "", w.lower()).strip("-")
 
 
 def tokenize(text, literal=False):
@@ -101,6 +97,22 @@ def assign_times(screens, words):
         print("fuzzy word matches:", ", ".join(warn))
     if missing:
         print("WARNING transcript words not shown:", missing)
+
+
+def align_words(script):
+    """The heard transcript words as assign_times takes them: "s" is the OUTPUT start rounded to 4 decimals ("s_src"
+    keeps the source start), in output order. Prints the voice map's warnings."""
+    voice = VoiceMap(EDL(script.get("edl"), script.get("src_duration", script.get("duration"))), script.get("audio"))
+    for w in voice.warnings:
+        print("WARNING", w)
+    words = []
+    for seg in load_json(ROOT / script["words"])["segments"]:
+        for w in seg["words"]:
+            t = voice.word_time(w)
+            if t is not None:          # only words that are heard can be shown (voice-overs may reorder them)
+                words.append({**w, "s_src": w["s"], "s": round(t, 4)})
+    words.sort(key=lambda w: w["s"])
+    return words
 
 
 def build_screens(script, words, takes):
@@ -179,6 +191,23 @@ def occupancy(masks, camframes, f0, f1):
         mw = cv2.warpAffine(m, Mq, (W // Q, H // Q), flags=cv2.INTER_NEAREST)
         occ |= mw
     return occ
+
+
+def face_boxes(track, camframes, edl, f0, f1, min_px=0):
+    """Her face on screen over output frames f0..f1 as (x0, y0, x1, y1): the per-coordinate median of the tracked
+    face boxes (track.json, the sample nearest each frame's source time, mapped through that frame's camera). Boxes
+    narrower than min_px source px are dropped (prep estimates "faces" on hands and bottles from the top of the
+    matte); the median rejects stray big ones. None when no face is seen."""
+    ts = np.array([fr["t"] for fr in track["frames"]])
+    boxes = []
+    for f in range(max(0, f0), min(len(camframes), f1 + 1)):
+        face = track["frames"][int(np.argmin(np.abs(ts - edl.src_time(f / FPS))))].get("face")
+        if not face or face[2] < min_px:
+            continue
+        x, y, w, h = face
+        sp = cam.matrix(camframes[f]) @ np.array([[x, x + w, x, x + w], [y, y, y + h, y + h], [1, 1, 1, 1]], np.float64)
+        boxes.append((sp[0].min(), sp[1].min(), sp[0].max(), sp[1].max()))
+    return tuple(float(v) for v in np.median(boxes, axis=0)) if boxes else None
 
 
 def person_box(masks, camframes, f):
@@ -280,16 +309,7 @@ def main(script_path, script=None):
     n_src = int(round(src_dur * FPS))
     duration = edl.duration
     n_frames = int(round(duration * FPS))
-    voice = VoiceMap(edl, script.get("audio"))
-    for w in voice.warnings:
-        print("WARNING", w)
-    words = []
-    for seg in load_json(ROOT / script["words"])["segments"]:
-        for w in seg["words"]:
-            t = voice.word_time(w)
-            if t is not None:          # only words that are heard can be shown (voice-overs may reorder them)
-                words.append({**w, "s_src": w["s"], "s": round(t, 4)})
-    words.sort(key=lambda w: w["s"])
+    words = align_words(script)
     # on the frame grid, like the picture (EDL.src_frame): float sums of segment lengths would put a take's first
     # frame into the previous take
     takes = [[round(edl.out_time(a) * FPS) / FPS, round(edl.out_time(b) * FPS) / FPS] for a, b in script["takes"]]
@@ -369,6 +389,7 @@ def main(script_path, script=None):
     occl = sorted({f for sc in screens if any(b.get("behind") for b in sc["blocks"])
                    for f in range(int(sc["t0"] * FPS), int(np.ceil(sc["t1"] * FPS)))})
     timeline["occlude_frames"] = occl
+    timeline["sfx"] = []            # automatic cues (CTA chime, insert pops and whooshes), expanded from sfx_palette
     save_json(timeline, build_dir / "timeline.json")
     save_json(meta, build_dir / "meta.json")
     sys.stdout.reconfigure(encoding="utf-8")

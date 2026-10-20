@@ -10,6 +10,9 @@ The build slot (build/meta.json, camera.json, timeline.json, overlay/) holds one
 --skip-overlay refuse unless it holds this script (--force: developer only), and a slot whose checks FAIL is not
 rendered without --allow-check-fail. The script is resolved once (resolve.py: studio -> brand -> format -> script);
 the log starts with the resolver summary, and build/<reel>/resolved_<name>.json keeps what was rendered.
+Music and SFX are found by name (assets.py); a missing one is skipped with a warning, and the reel is made without
+it. Next to output/<name>.mp4, output/<name>.report.json holds the final report's numbers (lengths, cuts, music,
+missing files).
 """
 import argparse
 import os
@@ -18,6 +21,7 @@ import sys
 import time
 from pathlib import Path
 
+import assets
 import audio
 import build_timeline
 import overlay_render
@@ -27,14 +31,47 @@ from common import (BUILD, OUT, ROOT, default_procs, keep_awake, load_json, reel
                     save_json, short, source_path, studio_lock)
 
 
-def sfx_cues(spec):
-    credits = {Path(c["file"]).stem: c for c in load_json(ROOT / "assets/sfx/credits_sfx.json")}
-    cues = []
-    for c in spec.get("sfx", []):
-        peak = credits[c["name"]].get("t_peak_s", 0.0) or 0.0
-        t = c["peak_at"] - peak if "peak_at" in c else c["t"]
-        cues.append({"file": str(ROOT / "assets/sfx" / f"{c['name']}.wav"), "t": t, "gain_db": c.get("gain_db", -12)})
-    return cues
+def sfx_cues(sfx):
+    """(cues for the mix, missing): sfx is the script's audio.sfx plus the timeline's automatic cues. A cue's name is
+    a sound's stem, a file name or a path (assets.find); it peaks at peak_at (its own "t_peak" wins over the sound's
+    measured or credited peak) or starts at t. A sound that is not found is skipped with a warning."""
+    cues, missing = [], []
+    for c in sfx:
+        path = assets.find("sfx", c["name"])
+        if path is None:
+            print(f"WARNING sfx «{c['name']}» not found - skipped")
+            missing.append({"kind": "sfx", "name": c["name"]})
+            continue
+        t = c["peak_at"] - (c["t_peak"] if "t_peak" in c else assets.sfx_peak(path)) if "peak_at" in c else c["t"]
+        cues.append({"file": str(path), "t": t, "gain_db": c.get("gain_db", -12)})
+    return cues, missing
+
+
+def find_music(m):
+    """(the music spec with its file resolved, missing): (None, [entry]) when the file is not found."""
+    path = assets.find("music", m["file"])
+    if path is None:
+        print(f"WARNING music «{m['file']}» not found - the reel is made without music")
+        return None, [{"kind": "music", "name": m["file"]}]
+    return {**m, "file": str(path)}, []
+
+
+def report(script, meta, music, missing, skip_audio):
+    """output/<name>.report.json: the numbers of the final report. Lengths are in seconds: raw_s is the footage as
+    shot, src_s after a speed-up, out_s the reel; edits counts the cuts of the edl."""
+    src = source_path(script)
+    clips_json = src.parent / "clips.json"
+    clips = load_json(clips_json)["clips"] if src.suffix == ".ffconcat" and clips_json.exists() else []
+    src_s = sum(c["duration"] for c in clips) if clips else meta["src_duration"]
+    raw_s = sum(c.get("orig_duration", c["duration"]) for c in clips) if clips else meta["src_duration"]
+    m = None
+    if music:
+        info = assets.music_info(music["file"])
+        m = {"asked": music.get("asked"), "file": Path(music["file"]).name, "title": info["title"],
+             "gain_db": None if skip_audio else music.get("gain_db", -20)}
+    return {"raw_s": round(raw_s, 2), "speed": clips[0].get("speed", 1.0) if clips else 1.0, "src_s": round(src_s, 2),
+            "out_s": round(meta["duration"], 2), "edits": len(meta["edl"]) - 1, "music": m, "missing": missing,
+            "warnings": []}
 
 
 def main():
@@ -82,14 +119,15 @@ def build(a, name):
         print(f"[overlay] {time.time() - T:.1f}s -> {short(BUILD / 'overlay')}", flush=True)
     au = script.get("audio", {})
     mix = BUILD / f"{name}_mix.wav"
+    cues, missing = sfx_cues(au.get("sfx", []) + load_json(BUILD / "timeline.json").get("sfx", []))
+    music = None
+    if au.get("music") and not a.no_music:
+        music, lost = find_music(au["music"])
+        missing += lost
     if not a.skip_audio:
-        music = None
-        if au.get("music") and not a.no_music:
-            m = au["music"]
-            music = {**m, "file": str(ROOT / "assets/music" / m["file"])}
         audio.render({"src": src, "duration": dur, "voice": au.get("voice", {"gain_db": 0}), "edl": meta["edl"],
                       "voice_over": au.get("voice_over", []), "mute": au.get("mute", []),
-                      "sfx": sfx_cues(au), "music": music}, mix)
+                      "sfx": cues, "music": music}, mix)
         print(f"[audio] {time.time() - T:.1f}s -> {short(mix)}", flush=True)
     out = OUT / f"{name}.mp4"
     rc = video_pass.main(BUILD / "camera.json", BUILD / "overlay", out, "", mix, dur,
@@ -101,6 +139,7 @@ def build(a, name):
         if name not in meta["renders"]:
             meta["renders"].append(name)
         save_json(meta, BUILD / "meta.json")
+        save_json(report(script, meta, music, missing, a.skip_audio), OUT / f"{name}.report.json")
     print(f"[video] rc={rc} {time.time() - T:.1f}s -> {short(out)}", flush=True)
     return rc
 

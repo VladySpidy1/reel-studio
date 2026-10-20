@@ -545,7 +545,7 @@ def export(a, name):
         o0 = fr(v["at"])
         audio_items.append({"o0": o0, "n": min(nfr, n_out - o0), "ref": aid, "start_s": 0.0,
                             "name": f"voice over {k + 1}", "db": voice_db + v.get("gain_db", 0)})
-    for cue in build.sfx_cues(au):
+    for cue in build.sfx_cues(au.get("sfx", []) + tl.get("sfx", []))[0]:      # the MP4's cues; missing ones warn
         aid, d = audio_asset(Path(cue["file"]), Path(cue["file"]).stem)
         o0, head = max(0, fr(cue["t"])), max(0.0, -cue["t"])      # a cue before 0 starts inside the file
         n = min(int((d - head) * FPS), n_out - o0)
@@ -553,9 +553,9 @@ def export(a, name):
             continue
         audio_items.append({"o0": o0, "n": n, "ref": aid, "start_s": head, "name": Path(cue["file"]).stem,
                             "db": cue.get("gain_db", -12) + norm})
-    if au.get("music"):
-        m = au["music"]
-        mp = ROOT / "assets/music" / m["file"]
+    m = build.find_music(au["music"])[0] if au.get("music") else None
+    if m:
+        mp = Path(m["file"])
         aid, d = audio_asset(mp, mp.stem)
         n = min(n_out, int((d - m.get("offset", 0)) * FPS))
         audio_items.append({"o0": 0, "n": n, "ref": aid, "start_s": m.get("offset", 0), "name": "music",

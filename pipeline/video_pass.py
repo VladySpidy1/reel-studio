@@ -198,12 +198,21 @@ def picture(cam, i, sources, shutter_default=0.0):
     return np.clip(acc / n_sub + 0.5, 0, 255).astype(np.uint8)
 
 
-def render_frame(cam, i, sources, gr, overlay_dir, occl, masks, shutter_default=0.0):
+def render_frame(cam, i, sources, gr, overlay_dir, occl, masks, shutter_default=0.0, slots=None):
+    """Output frame i, bottom to top: the picture (camera, white balance, grade) or a full-screen insert, the flash,
+    the "under" layers, the subtitle PNG (cut by her matte on occl frames), the "front" text, the "over" layers.
+    slots {name: function} holds the layers the reel has: "full" (i) -> a full-screen picture or None (never
+    graded); "under", "front" and "over" (img, i, fr) -> img."""
+    slots = slots or {}
     fr = cam[i]
     m = camera_matrix(fr)
-    img = gr(picture(cam, i, sources, shutter_default))
+    img = slots["full"](i) if "full" in slots else None
+    if img is None:
+        img = gr(picture(cam, i, sources, shutter_default))
     if fr.get("flash", 0) > 0:
         img = cv2.addWeighted(img, 1 - fr["flash"], np.full_like(img, 255), fr["flash"], 0)
+    if "under" in slots:
+        img = slots["under"](img, i, fr)
     if overlay_dir:
         p = Path(overlay_dir) / f"{i:05d}.png"
         if p.exists():
@@ -216,15 +225,20 @@ def render_frame(cam, i, sources, gr, overlay_dir, occl, masks, shutter_default=
                 if i in occl and masks is not None:
                     a *= 1 - person_alpha(masks, fr.get("src_f", i), m)
                 img = cv2.blendLinear(img, np.ascontiguousarray(bgra[:, :, :3]), 1 - a, a)
+    for k in ("front", "over"):
+        if k in slots:
+            img = slots[k](img, i, fr)
     return img
 
 
 def segment(a, b, cam, out_path, overlay_dir, timeline_path, masks_path, grade, src, shutter=0.0):
     gr = Grade(grade)
+    tl = load_json(timeline_path) if timeline_path else {}
     occl, masks = set(), None
     if timeline_path and masks_path:
-        occl = set(load_json(timeline_path).get("occlude_frames", []))
+        occl = set(tl.get("occlude_frames", []))
         masks = np.load(masks_path, mmap_mode="r")
+    slots = {}                      # render_frame's layers, filled from the timeline (none yet)
     sources = [FrameSource(src), FrameSource(src)]      # the second one feeds the incoming shot of a push
     enc = subprocess.Popen(
         ["ffmpeg", "-nostdin", "-v", "error", "-y",
@@ -235,7 +249,7 @@ def segment(a, b, cam, out_path, overlay_dir, timeline_path, masks_path, grade, 
          "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", str(out_path)],
         stdin=subprocess.PIPE)
     for i in range(a, b):
-        img = render_frame(cam, i, sources, gr, overlay_dir, occl, masks, shutter)
+        img = render_frame(cam, i, sources, gr, overlay_dir, occl, masks, shutter, slots)
         enc.stdin.write(img.tobytes())
     enc.stdin.close()
     enc.wait()
