@@ -12,7 +12,7 @@ import audio
 import build_timeline
 import overlay_render
 import video_pass
-from common import BUILD, FPS, OUT, ROOT, load_json
+from common import BUILD, OUT, ROOT, load_json, source_path
 
 
 def sfx_cues(spec):
@@ -32,9 +32,11 @@ def main():
     ap.add_argument("--skip-overlay", action="store_true")
     ap.add_argument("--skip-audio", action="store_true")
     ap.add_argument("--no-music", action="store_true")
+    ap.add_argument("--no-grade", action="store_true", help="skip the grade (reference for comparing the editable project)")
     ap.add_argument("--name", default="")
     a = ap.parse_args()
     script = load_json(a.script)
+    src = source_path(script)
     name = a.name or Path(a.script).parent.name
     OUT.mkdir(exist_ok=True)
     T = time.time()
@@ -54,12 +56,14 @@ def main():
         if au.get("music") and not a.no_music:
             m = au["music"]
             music = {**m, "file": str(ROOT / "assets/music" / m["file"])}
-        audio.render({"duration": dur, "voice": au.get("voice", {"gain_db": 0}), "edl": meta["edl"],
+        audio.render({"src": src, "duration": dur, "voice": au.get("voice", {"gain_db": 0}), "edl": meta["edl"],
+                      "voice_over": au.get("voice_over", []), "mute": au.get("mute", []),
                       "sfx": sfx_cues(au), "music": music}, mix)
         print(f"[audio] {time.time() - T:.1f}s", flush=True)
     out = OUT / f"{name}.mp4"
     rc = video_pass.main(BUILD / "camera.json", BUILD / "overlay", out, "", mix, dur,
-                         BUILD / "timeline.json", ROOT / script["masks"], script.get("grade"))
+                         BUILD / "timeline.json", ROOT / script["masks"], None if a.no_grade else script.get("grade"),
+                         src=src)
     print(f"[video] rc={rc} {time.time() - T:.1f}s -> {out}", flush=True)
     return rc
 

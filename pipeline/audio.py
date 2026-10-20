@@ -2,8 +2,12 @@
 then two-pass loudness normalisation to Instagram-friendly -14 LUFS.
 
 mix spec (dict):
+  src: source video (its audio is the voice)
   duration: float seconds
+  edl: script edl (the picture's own sound is cut exactly like the picture, on the same frame grid)
   voice: {"gain_db": 0}
+  voice_over: [{"src": [a, b], "at": out_t, "gain_db": 0}]   extra source sound laid at output time
+  mute: [[t0, t1], ...]                                       output ranges where the picture's sound is off
   sfx: [{"file": path, "t": seconds, "gain_db": -12}]
   music: {"file": path, "gain_db": -20, "offset": 0, "fade_in": 0.3, "fade_out": 1.2} | null
 """
@@ -12,7 +16,8 @@ import re
 import subprocess
 from pathlib import Path
 
-from common import SRC
+from common import FPS
+from edl import EDL
 
 
 def _voice_chain(gain_db, process=False):
@@ -26,16 +31,20 @@ def _voice_chain(gain_db, process=False):
 
 
 def _voice_edl(edl):
-    """Cut/hold the source audio exactly like the picture (holds = silence)."""
+    """Cut/hold the source audio exactly like the picture (holds = silence). Segments use the picture's
+    frame grid (EDL.src_frame), so sound and picture cannot drift apart over many cuts."""
     parts, labels = [], []
-    for k, seg in enumerate(edl or []):
+    for k, (o0, o1, seg) in enumerate(EDL(edl, 0).items if edl else []):
+        d = (round(o1 * FPS) - round(o0 * FPS)) / FPS
+        if d <= 0:              # shorter than half a frame: the picture skips it too (atrim duration=0 means "all")
+            continue
         if "src" in seg:
-            a, b = seg["src"]
+            a = round(seg["src"][0] * FPS) / FPS
             parts.append(f"[0:a]aresample=48000,aformat=channel_layouts=stereo,"
-                         f"atrim=start={a:.4f}:end={b:.4f},asetpts=PTS-STARTPTS,"
-                         f"afade=t=in:d=0.006,afade=t=out:st={max(0, b - a - 0.006):.4f}:d=0.006[e{k}]")
+                         f"atrim=start={a:.6f}:duration={d:.6f},asetpts=PTS-STARTPTS,"
+                         f"afade=t=in:d=0.006,afade=t=out:st={max(0, d - 0.006):.6f}:d=0.006[e{k}]")
         else:
-            parts.append(f"anullsrc=r=48000:cl=stereo,atrim=0:{seg['dur']:.4f}[e{k}]")
+            parts.append(f"anullsrc=r=48000:cl=stereo,atrim=0:{d:.6f}[e{k}]")
         labels.append(f"[e{k}]")
     if not labels:
         return "[0:a]aresample=48000,aformat=channel_layouts=stereo", []
@@ -44,14 +53,34 @@ def _voice_edl(edl):
 
 
 def build_filter(spec):
-    inputs = ["-i", str(SRC)]
+    inputs = ["-i", str(spec["src"])]
     head, edl_parts = _voice_edl(spec.get("edl"))
     parts = list(edl_parts)
     music = spec.get("music")
     chain = _voice_chain(spec["voice"].get("gain_db", 0), spec["voice"].get("process", False))
     sep = "" if head.endswith("]") else ","
     duck = bool(music and music.get("sidechain"))
-    parts.append(f"{head}{sep}{chain}" + (",asplit=2[voice][vsc]" if duck else "[voice]"))
+    parts.append(f"{head}{sep}anull[vpic]")
+    cur = "[vpic]"
+    if spec.get("mute"):           # 1 ms audio frames: eval=frame then gives real 10 ms ramps, not ~21 ms steps
+        parts.append(f"{cur}asetnsamples=n=48:p=0[vps]")
+        cur = "[vps]"
+    for k, (m0, m1) in enumerate(spec.get("mute", [])):        # 10 ms ramps, no clicks
+        parts.append(f"{cur}volume=eval=frame:volume='if(between(t,{m0:.4f},{m1:.4f}),"
+                     f"max(0.0,1-min(t-{m0:.4f},{m1:.4f}-t)/0.01),1)'[vm{k}]")
+        cur = f"[vm{k}]"
+    vo = []
+    for k, v in enumerate(spec.get("voice_over", [])):
+        a, b = v["src"]
+        n = max(0, int(round(v["at"] * 48000)))
+        parts.append(f"[0:a]aresample=48000,aformat=channel_layouts=stereo,atrim=start={a:.6f}:end={b:.6f},"
+                     f"asetpts=PTS-STARTPTS,afade=t=in:d=0.006,afade=t=out:st={max(0, b - a - 0.006):.6f}:d=0.006,"
+                     f"volume={v.get('gain_db', 0)}dB,adelay={n}S|{n}S[vo{k}]")
+        vo.append(f"[vo{k}]")
+    if vo:
+        parts.append(f"{cur}{''.join(vo)}amix=inputs={1 + len(vo)}:normalize=0:dropout_transition=0[vsum]")
+        cur = "[vsum]"
+    parts.append(f"{cur}{chain}" + (",asplit=2[voice][vsc]" if duck else "[voice]"))
     labels = ["[voice]"]
     idx = 1
     for k, cue in enumerate(spec.get("sfx", [])):

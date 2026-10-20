@@ -5,11 +5,21 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PIPE = ROOT / "pipeline"
-SRC = ROOT / "IMG_2459.MOV"
 OUT = ROOT / "output"
 BUILD = ROOT / "build"
 
 W, H, FPS = 1080, 1920, 30
+
+
+def source_path(script):
+    """The reel's source video (repo-relative in script.json): a 1080x1920 30 fps file, usually the
+    source.ffconcat written by ingest.py."""
+    return ROOT / script["source"]
+
+
+def torch_device():
+    import torch
+    return "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def load_json(path):

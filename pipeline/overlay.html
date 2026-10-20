@@ -34,6 +34,7 @@ window.ready = Promise.resolve();
 function styleFor(kind, S, tok) {
   const st = styleForKind(kind, S);
   if (tok && tok.scale) st.size *= tok.scale;
+  if (tok && tok.color && st.color !== S.main.color) st.color = tok.color;   // per-line accent colour
   return st;
 }
 

@@ -1,0 +1,720 @@
+{
+ "source": "build/yocase_line/source.ffconcat",
+ "words": "build/yocase_line/words.json",
+ "masks": "build/yocase_line/masks.npy",
+ "track": "build/yocase_line/track.json",
+ "src_duration": 228.6333,
+ "takes": [
+  [
+   19.1333,
+   20.3
+  ],
+  [
+   20.6,
+   22.5333
+  ],
+  [
+   33.6,
+   37.3333
+  ],
+  [
+   59.0667,
+   61.2333
+  ],
+  [
+   76.4667,
+   79.1333
+  ],
+  [
+   96.9333,
+   100.6667
+  ],
+  [
+   141.6,
+   142.7
+  ],
+  [
+   149.3,
+   149.8333
+  ],
+  [
+   149.8333,
+   150.3333
+  ],
+  [
+   115.4667,
+   116.5333
+  ],
+  [
+   117.9333,
+   121.7
+  ],
+  [
+   215.6333,
+   216.1667
+  ],
+  [
+   217.7333,
+   223.7333
+  ]
+ ],
+ "edl": [
+  {
+   "src": [
+    19.1333,
+    20.3
+   ]
+  },
+  {
+   "src": [
+    20.6,
+    22.5333
+   ]
+  },
+  {
+   "src": [
+    33.6,
+    37.3333
+   ]
+  },
+  {
+   "src": [
+    59.0667,
+    61.2333
+   ]
+  },
+  {
+   "src": [
+    76.4667,
+    79.1333
+   ]
+  },
+  {
+   "src": [
+    96.9333,
+    100.6667
+   ]
+  },
+  {
+   "src": [
+    141.6,
+    142.7
+   ]
+  },
+  {
+   "src": [
+    149.3,
+    149.8333
+   ]
+  },
+  {
+   "hold": 149.8333,
+   "dur": 1.1
+  },
+  {
+   "src": [
+    149.8333,
+    150.3333
+   ]
+  },
+  {
+   "src": [
+    115.4667,
+    116.5333
+   ]
+  },
+  {
+   "src": [
+    117.9333,
+    121.7
+   ]
+  },
+  {
+   "src": [
+    215.6333,
+    216.1667
+   ]
+  },
+  {
+   "src": [
+    217.7333,
+    223.7333
+   ]
+  }
+ ],
+ "style": {
+  "accent": {
+   "color": "#8A2E92",
+   "outline": "0 0 1px rgba(40,0,45,.85), 0 0 1px rgba(40,0,45,.85)"
+  },
+  "label": {
+   "color": "#8A2E92"
+  }
+ },
+ "screens": [
+  {
+   "take": 1,
+   "blocks": [
+    {
+     "lines": [
+      "наші лінійки"
+     ]
+    }
+   ]
+  },
+  {
+   "take": 2,
+   "blocks": [
+    {
+     "lines": [
+      "кому і яка _підійде_"
+     ]
+    },
+    {
+     "lines": [
+      {
+       "text": "*поїхали*",
+       "anim": "pop",
+       "scale": 1.8
+      }
+     ],
+     "behind": false
+    }
+   ]
+  },
+  {
+   "take": 3,
+   "blocks": [
+    {
+     "lines": [
+      {
+       "text": "*energy*",
+       "literal": true,
+       "t": 3.3667,
+       "color": "#22A866",
+       "scale": 1.3,
+       "anim": "pop"
+      },
+      "щоденний догляд",
+      "для _нормального_ волосся"
+     ]
+    }
+   ]
+  },
+  {
+   "take": 4,
+   "blocks": [
+    {
+     "lines": [
+      {
+       "text": "тонізує та",
+       "color": "#22A866"
+      },
+      {
+       "text": "стимулює *ріст*",
+       "color": "#22A866"
+      }
+     ],
+     "behind": false,
+     "place": {
+      "x": 60,
+      "y": 280,
+      "safe": [
+       56,
+       250,
+       560,
+       640
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "take": 5,
+   "blocks": [
+    {
+     "lines": [
+      {
+       "text": "*repair plex*",
+       "literal": true,
+       "t": 9.3333,
+       "color": "#C4207F",
+       "scale": 1.3,
+       "anim": "pop"
+      },
+      "для _сухого_ волосся"
+     ]
+    }
+   ]
+  },
+  {
+   "take": 6,
+   "blocks": [
+    {
+     "lines": [
+      "відновлення",
+      "структури",
+      {
+       "text": "зменшення",
+       "color": "#C4207F"
+      },
+      {
+       "text": "*ламкості*",
+       "color": "#C4207F"
+      }
+     ],
+     "behind": false,
+     "place": {
+      "x": 730,
+      "y": 110,
+      "safe": [
+       700,
+       60,
+       1040,
+       620
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "take": 7,
+   "t1_override": 18.6333,
+   "blocks": [
+    {
+     "lines": [
+      {
+       "text": "*balance*",
+       "literal": true,
+       "t": 15.5667,
+       "color": "#4A5BD8",
+       "scale": 1.3,
+       "anim": "pop"
+      },
+      "для _жирного_",
+      "волосся"
+     ],
+     "behind": false,
+     "place": {
+      "x": 700,
+      "y": 280,
+      "safe": [
+       690,
+       240,
+       1040,
+       560
+      ]
+     }
+    },
+    {
+     "lines": [
+      {
+       "text": "зміцнення та",
+       "color": "#4A5BD8"
+      },
+      {
+       "text": "*блиск*",
+       "color": "#4A5BD8"
+      }
+     ],
+     "behind": false,
+     "place": {
+      "x": 700,
+      "y": 600,
+      "safe": [
+       690,
+       560,
+       1040,
+       820
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "take": 11,
+   "blocks": [
+    {
+     "lines": [
+      {
+       "text": "*fix color*",
+       "literal": true,
+       "t": 19.9667,
+       "color": "#0FA0DC",
+       "scale": 1.3,
+       "anim": "pop"
+      },
+      "для _фарбованого_",
+      "волосся"
+     ],
+     "behind": false,
+     "until": 21.8,
+     "place": {
+      "x": 60,
+      "y": 240,
+      "safe": [
+       56,
+       230,
+       420,
+       560
+      ]
+     }
+    },
+    {
+     "lines": [
+      "без вимивання",
+      {
+       "text": "*кольору*",
+       "color": "#0FA0DC"
+      }
+     ],
+     "behind": false,
+     "place": {
+      "x": 60,
+      "y": 240,
+      "safe": [
+       56,
+       230,
+       420,
+       560
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "take": 13,
+   "blocks": [
+    {
+     "lines": [
+      "не знаєш яку",
+      "лінійку _вибрати_"
+     ]
+    },
+    {
+     "lines": [
+      "пиши нам",
+      "в *дірект*"
+     ]
+    },
+    {
+     "lines": [
+      "ми із задоволенням",
+      "тобі допоможемо"
+     ]
+    }
+   ]
+  }
+ ],
+ "doodles": [],
+ "camera": {
+  "push": {
+   "from": 1.0,
+   "to": 1.0
+  },
+  "push_takes": {
+   "1": {
+    "from": 1.0,
+    "to": 1.0117,
+    "ease": "linear"
+   },
+   "3": {
+    "from": 1.0,
+    "to": 1.0373,
+    "ease": "linear"
+   },
+   "5": {
+    "from": 1.0,
+    "to": 1.0267,
+    "ease": "linear"
+   },
+   "7": {
+    "from": 1.0,
+    "to": 1.011,
+    "ease": "linear"
+   },
+   "13": {
+    "from": 1.0,
+    "to": 1.06,
+    "ease": "linear"
+   },
+   "2": {
+    "from": 1.16,
+    "to": 1.1824,
+    "ease": "linear",
+    "target": "face"
+   },
+   "4": {
+    "from": 1.0,
+    "to": 1.1,
+    "ease": "expo",
+    "dur": 0.3,
+    "creep": 0.012,
+    "target": [
+     540,
+     900
+    ]
+   },
+   "6": {
+    "from": 1.0,
+    "to": 1.08,
+    "ease": "expo",
+    "dur": 0.3,
+    "creep": 0.012,
+    "target": [
+     540,
+     900
+    ]
+   },
+   "8": {
+    "from": 1.16,
+    "to": 1.16,
+    "target": [
+     600,
+     680
+    ]
+   },
+   "9": {
+    "from": 1.16,
+    "to": 1.195,
+    "ease": "linear",
+    "target": [
+     600,
+     680
+    ]
+   },
+   "10": {
+    "from": 1.0,
+    "to": 1.0
+   },
+   "11": {
+    "from": 1.0,
+    "to": 1.08,
+    "ease": "expo",
+    "dur": 0.3,
+    "creep": 0.012,
+    "target": [
+     540,
+     900
+    ]
+   },
+   "12": {
+    "from": 1.0,
+    "to": 1.0
+   }
+  },
+  "freezes": [],
+  "punches": [
+   {
+    "t": 5.2667,
+    "scale": 1.15,
+    "in": 0.1,
+    "until": 6.8333,
+    "out": 0.0,
+    "target": "face",
+    "anchor": true
+   },
+   {
+    "t": 10.4,
+    "scale": 1.15,
+    "in": 0.1,
+    "until": 11.6667,
+    "out": 0.0,
+    "target": "face",
+    "anchor": true
+   },
+   {
+    "t": 27.3,
+    "scale": 1.12,
+    "in": 0.1,
+    "until": 30.0,
+    "out": 0.0,
+    "target": "face",
+    "anchor": true
+   }
+  ],
+  "shakes": [],
+  "flashes": [
+   {
+    "t": 17.0333,
+    "dur": 0.15,
+    "amount": 0.6
+   }
+  ],
+  "transitions": [
+   {
+    "type": "push",
+    "at": 3.1,
+    "dir": "right",
+    "out": 4,
+    "in": 9,
+    "ease_in": "expo",
+    "roll": 3,
+    "shutter": 0.6
+   },
+   {
+    "type": "zoom_through",
+    "at": 6.8333,
+    "target": [
+     516,
+     630
+    ],
+    "scale": 1.35,
+    "land": 1.0,
+    "out": 6,
+    "in": 6,
+    "shutter": 0.6
+   },
+   {
+    "type": "zoom_through",
+    "at": 11.6667,
+    "target": [
+     544,
+     601
+    ],
+    "scale": 1.35,
+    "land": 1.0,
+    "out": 6,
+    "in": 6,
+    "shutter": 0.6
+   },
+   {
+    "type": "zoom_through",
+    "at": 19.7,
+    "target": [
+     480,
+     760
+    ],
+    "scale": 1.3,
+    "land": 1.0,
+    "out": 5,
+    "in": 6,
+    "shutter": 0.6
+   }
+  ],
+  "motion_blur": 0.5,
+  "gains": {}
+ },
+ "grade": {
+  "lift": 0.01,
+  "contrast": 1.04,
+  "saturation": 1.04,
+  "vignette": 0.04
+ },
+ "audio": {
+  "voice": {
+   "gain_db": 0,
+   "process": false
+  },
+  "voice_over": [
+   {
+    "src": [
+     112.5,
+     114.6333
+    ],
+    "at": 15.4667
+   },
+   {
+    "src": [
+     127.8,
+     129.3333
+    ],
+    "at": 17.5667
+   },
+   {
+    "src": [
+     145.9333,
+     149.4667
+    ],
+    "at": 19.8
+   }
+  ],
+  "mute": [
+   [
+    15.4,
+    23.4667
+   ]
+  ],
+  "music": {
+   "file": "music_03_gimme_that_groove_112bpm_full.wav",
+   "gain_db": -18,
+   "offset": 18.423,
+   "fade_in": 0,
+   "fade_out": 0.8,
+   "dropouts": []
+  },
+  "sfx": [
+   {
+    "name": "whoosh_quick_03_swish",
+    "peak_at": 3.1,
+    "gain_db": -12
+   },
+   {
+    "name": "whoosh_05_swipe_zoom",
+    "peak_at": 6.8333,
+    "gain_db": -12
+   },
+   {
+    "name": "bass_thump_01_sub",
+    "peak_at": 6.8667,
+    "gain_db": -14
+   },
+   {
+    "name": "whoosh_04_air_into_cut",
+    "peak_at": 11.6667,
+    "gain_db": -12
+   },
+   {
+    "name": "punch_soft_impact",
+    "peak_at": 11.7,
+    "gain_db": -14
+   },
+   {
+    "name": "whoosh_05_swipe_zoom",
+    "peak_at": 19.7,
+    "gain_db": -14
+   },
+   {
+    "name": "bass_thump_02_synth",
+    "peak_at": 19.7333,
+    "gain_db": -14
+   },
+   {
+    "name": "camera_shutter_01",
+    "peak_at": 17.0333,
+    "gain_db": -10
+   },
+   {
+    "name": "whoosh_soft_02_wind_swoosh",
+    "peak_at": 24.0,
+    "gain_db": -12,
+    "move": "bottles cover the lens"
+   },
+   {
+    "name": "pop_04_light",
+    "peak_at": 3.3667,
+    "gain_db": -20
+   },
+   {
+    "name": "pop_02_bubble_a",
+    "peak_at": 9.3333,
+    "gain_db": -20
+   },
+   {
+    "name": "pop_03_bubble_b",
+    "peak_at": 15.5667,
+    "gain_db": -20
+   },
+   {
+    "name": "pop_04_light",
+    "peak_at": 19.9667,
+    "gain_db": -20
+   },
+   {
+    "name": "ding_02_soft_chime",
+    "peak_at": 27.3,
+    "gain_db": -18
+   }
+  ]
+ }
+}

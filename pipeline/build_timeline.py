@@ -6,11 +6,11 @@ Line markup:
   //          pink grotesk ornament
   №3          pink serif label "( №3 )" (pops in)
   a line may be a string or {"text", "align": "right"|"left", "indent": em, "dy": em,
-                             "scale": k, "anim": "pop"|"type"|"none",
+                             "scale": k, "anim": "pop"|"type"|"none", "color": accent colour of this line,
                              "literal": true, "t": out_time}   (literal = not spoken, e.g. a hook title)
 All times in the script (camera, audio, doodles, literal lines) are OUTPUT times (after the edl).
-Every spoken word in the lines must match the transcript in order (punctuation/case ignored);
-its reveal time is the word's start time.
+Every spoken word in the lines must match the HEARD transcript in output order (punctuation/case ignored;
+see edl.VoiceMap for voice-overs and mutes); its reveal time is the word's start time.
 """
 import json
 import re
@@ -22,7 +22,7 @@ import numpy as np
 from playwright.sync_api import sync_playwright
 
 import camera as cam
-from edl import EDL
+from edl import EDL, VoiceMap
 from common import FPS, H, PIPE, ROOT, W, load_json, save_json
 
 Q = 4  # masks are quarter resolution
@@ -114,7 +114,7 @@ def build_screens(script, words, takes):
                 if spec.get("literal"):
                     for tok in spec["tokens"]:
                         tok["t"] = spec["t"]
-                for key in ("anim", "scale"):
+                for key in ("anim", "scale", "color"):
                     if key in spec:
                         for tok in spec["tokens"]:
                             tok[key] = spec[key]
@@ -136,6 +136,10 @@ def build_screens(script, words, takes):
         if nxt and nxt["take"] == sc["take"] and "t0_override" not in nxt:
             sc["t1"] = min(tok["t"] for b in nxt["blocks"] for l in b["lines"] for tok in l["tokens"] if "t" in tok)
         sc["t1"] = sc.get("t1_override", sc["t1"])
+        late = [tok["text"] for b in sc["blocks"] for l in b["lines"] for tok in l["tokens"]
+                if "word" in tok and not sc["t0"] - 1e-6 <= tok["t"] < sc["t1"]]
+        if late:              # e.g. a voice-over that runs past the take's picture: extend with t1_override
+            print(f"WARNING screen {i + 1} (take {sc['take']}, {sc['t0']:.2f}-{sc['t1']:.2f}s) never shows: {late}")
         # ornaments/labels take the time of the next word in the block (labels: screen start)
         for b in sc["blocks"]:
             flat = [tok for l in b["lines"] for tok in l["tokens"]]
@@ -192,20 +196,26 @@ def solve_block(occ, bw, bh, style, face, pbox, place):
     occ = occ.copy()
     k = max(1, int(round(margin / Q)))
     occ = cv2.dilate(occ, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * k + 1, 2 * k + 1)))
-    # static exclusions + safe area
+    # static exclusions + safe area; a block's own safe box never reaches past the global one (the phone crop)
+    gx0, gy0, gx1, gy1 = L["safe"]
     x0s, y0s, x1s, y1s = place.get("safe", L["safe"])
+    x0s, y0s, x1s, y1s = max(x0s, gx0), max(y0s, gy0), min(x1s, gx1), min(y1s, gy1)
     block = np.ones_like(occ)
     block[y0s // Q:y1s // Q, x0s // Q:x1s // Q] = 0
     for ex in L["exclude"] + place.get("exclude", []):
         block[ex[1] // Q:ex[3] // Q, ex[0] // Q:ex[2] // Q] = 1
     occ = np.maximum(occ, block)
-    ii = np.pad(occ.astype(np.int32), ((1, 0), (1, 0))).cumsum(0).cumsum(1)
     qw, qh = int(np.ceil(bw / Q)), int(np.ceil(bh / Q))
     Hq, Wq = occ.shape
     ys = np.arange(0, Hq - qh)
     xs = np.arange(0, Wq - qw)
     Y, X = np.meshgrid(ys, xs, indexing="ij")
-    cnt = ii[Y + qh, X + qw] - ii[Y, X + qw] - ii[Y + qh, X] + ii[Y, X]
+
+    def window_sum(m):
+        ii = np.pad(m.astype(np.int32), ((1, 0), (1, 0))).cumsum(0).cumsum(1)
+        return ii[Y + qh, X + qw] - ii[Y, X + qw] - ii[Y + qh, X] + ii[Y, X]
+    cnt = window_sum(occ)
+    out = window_sum(block)          # cells outside the safe area or inside an exclusion
     # preferences (screen px)
     px, py = X * Q, Y * Q
     fx, fy, fw, fh = face
@@ -236,8 +246,11 @@ def solve_block(occ, bw, bh, style, face, pbox, place):
         c = np.where(feasible, cost, np.inf)
         warn = None
     else:
+        # no free spot: overlap the person rather than leave the safe area (text past it is cropped on phones)
         c = cost + cnt * 400.0
-        warn = f"no free spot; min overlap {cnt.min()} q-px"
+        if (out == 0).any():
+            c = np.where(out == 0, c, np.inf)
+        warn = f"no free spot; min overlap {cnt[np.isfinite(c)].min()} q-px"
     j = np.unravel_index(np.argmin(c), c.shape)
     return int(px[j]), int(py[j]), warn
 
@@ -264,15 +277,27 @@ def main(script_path):
     n_src = int(round(src_dur * FPS))
     duration = edl.duration
     n_frames = int(round(duration * FPS))
+    voice = VoiceMap(edl, script.get("audio"))
+    for w in voice.warnings:
+        print("WARNING", w)
     words = []
     for seg in load_json(ROOT / script["words"])["segments"]:
         for w in seg["words"]:
-            words.append({**w, "s_src": w["s"], "s": round(edl.out_time(w["s"]), 4)})
-    takes = [[edl.out_time(a), edl.out_time(b)] for a, b in script["takes"]]
+            t = voice.word_time(w)
+            if t is not None:          # only words that are heard can be shown (voice-overs may reorder them)
+                words.append({**w, "s_src": w["s"], "s": round(t, 4)})
+    words.sort(key=lambda w: w["s"])
+    # on the frame grid, like the picture (EDL.src_frame): float sums of segment lengths would put a take's first
+    # frame into the previous take
+    takes = [[round(edl.out_time(a) * FPS) / FPS, round(edl.out_time(b) * FPS) / FPS] for a, b in script["takes"]]
     takes[0][0], takes[-1][1] = 0.0, duration
     screens = build_screens(script, words, takes)
     track = load_json(ROOT / script["track"])
     cam_spec = {**script.get("camera", {}), "src_takes": script["takes"]}
+    clips_json = ROOT / Path(script.get("source", "")).parent / "clips.json"
+    if str(script.get("source", "")).endswith(".ffconcat") and clips_json.exists():   # transition handles stay in their clip
+        cam_spec["clips"] = [[round(c["offset"] * FPS), round(c["offset"] * FPS) + c["n_frames"]]
+                             for c in load_json(clips_json)["clips"]]
     camera = cam.build(cam_spec, takes, n_frames, track, edl, n_src)
     build_dir = ROOT / "build"
     save_json(camera, build_dir / "camera.json")
@@ -324,6 +349,9 @@ def main(script_path):
             b["x"] = x - bb["x"]
             b["y"] = y - bb["y"]
             text = " / ".join(" ".join(t["text"] for t in l["tokens"]) for l in b["lines"])
+            sx0, sy0, sx1, sy1 = style["layout"]["safe"]
+            if x < sx0 - Q or y < sy0 - Q or x + bb["w"] > sx1 + Q or y + bb["h"] > sy1 + Q:   # Q: solver grid
+                warn = (warn + "; " if warn else "") + "OUTSIDE the IG crop-safe area, shorten the lines"
             report.append(f"{sc['t0']:6.2f}-{sc['t1']:6.2f} {b['id']} at ({x},{y}) {int(bb['w'])}x{int(bb['h'])}"
                           f"{'  !! ' + warn if warn else ''}  | {text}")
     occl = sorted({f for sc in screens if any(b.get("behind") for b in sc["blocks"])

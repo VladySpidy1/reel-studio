@@ -1,8 +1,8 @@
 {
- "source": "VIDEO.MOV",
- "words": "build/prep_NAME/words.json",
- "masks": "build/prep_NAME/masks.npy",
- "track": "build/prep_NAME/track.json",
+ "source": "build/NAME/source.ffconcat",
+ "words": "build/NAME/words.json",
+ "masks": "build/NAME/masks.npy",
+ "track": "build/NAME/track.json",
  "src_duration": 0.0,
  "takes": [
   [
@@ -32,7 +32,7 @@
   "layout": {
    "exclude": [
     [
-     960,
+     850,
      1050,
      1080,
      1920

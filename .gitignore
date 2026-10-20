@@ -17,3 +17,10 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Raw client footage (kept local; not part of the studio)
+исходники/
+
+# Logs and per-machine Claude settings
+*.log
+.claude/settings.local.json

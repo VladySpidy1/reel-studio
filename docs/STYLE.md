@@ -30,7 +30,9 @@ spacing must be tight.
 - Blocks float beside the person ("editorial" placement), never a bottom bar.
 - Person matte (Robust Video Matting) per frame; a block must stay clear of her until it has been read
   (`read_time` 0.9 s after its last word); afterwards she may walk IN FRONT of it (text-behind-subject).
-- IG safe zone: x 56–1024, y 250–1480, right button column (x>960, y>1050) excluded.
+- IG safe zone: x 128–952, y 250–1480, right button column (x>850, y>1050) excluded. Instagram fills tall
+  phones (19.5:9, 20:9) edge to edge and crops ~100 px off each side of the 1080 frame; text at x 56 was cut
+  off on a real phone (2026-10-13). The solver never leaves this area, and the build flags any block outside it.
 - Video-specific exclusions (bright lamps etc.) go into the script's `style.layout.exclude`.
 
 ## Comedy structure that worked ("Хоче X, а Y" skits)

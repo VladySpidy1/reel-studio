@@ -72,18 +72,37 @@ handles mechanics (ADR-0001).
 
 ## Current state (2026-10-10)
 
-- Working pipeline for one brand and one format, built on Windows, in `pipeline/`:
-  - `prep.py`: faster-whisper large-v3 (CPU, int8) with onset snapping, take cuts, Robust Video Matting
-    (mobilenetv3, CPU) person matte, subject track, 1 fps contact sheet.
+- Pipeline in `pipeline/`, ported to macOS / Apple Silicon (roadmap step 1 done; `setup_mac.sh`, locked deps in
+  `requirements.lock.txt`, run everything with `.venv/bin/python`):
+  - `ingest.py`: raw phone clips (4K HEVC, rotation, VFR) -> 1080×1920 30 fps ProRes 422 HQ intermediates with
+    sample-exact audio, joined by `source.ffconcat` (the reel's source; clip boundaries are the cuts).
+  - `prep.py`: faster-whisper large-v3 run per Silero-VAD speech chunk (whole-clip decoding silently dropped
+    repeated takes and hallucinated «Дякую за перегляд» on noise), float32 with 16 GB RAM / int8 with 8 GB,
+    onset snapping; Robust Video Matting resnet50 on MPS (~36 fps); subject track; contact sheet.
   - Subtitles: HTML/CSS overlay (`overlay.html`) rendered to a transparent PNG sequence by headless Chrome
     through Playwright; automatic layout solver with text-behind-subject (`build_timeline.py`).
-  - Camera moves, freezes, flashes (`camera.py`, `video_pass.py`); SFX + music mix normalised to -14 LUFS
-    (`audio.py`); H.264 1080×1920 output via ffmpeg.
+  - Virtual camera (`camera.py`, `video_pass.py`): creeps, A/B framing, anchored punches, freezes, flashes, and
+    gesture transitions - swipe-whip (`push`, two-layer composite with roll), `zoom_through`, `spin` - with a true
+    sub-frame motion-blur shutter. `motion.py` finds sweeps and pushes-to-lens in the footage (`motion.json`),
+    `beats.py` the music's beat phase and moves cuts onto beats. SFX + music mix normalised to -14 LUFS
+    (`audio.py`); voice can be laid independently of the picture (`audio.voice_over`, `audio.mute`); H.264
+    1080×1920 output via ffmpeg.
+  - Editing craft: `.claude/skills/reel-videographer/` (researched playbook: effects with frame timings, format
+    and universal grammar; effect -> script table; learned rules), `lint_edit.py` checks a script against it,
+    `contact_sheet.py` makes labelled sheets for watching footage and drafts. First format file:
+    `formats/product-lineup/FORMAT.md`.
+  - `export_fcpxml.py`: editable project (FCPXML 1.10 + self-contained media folder). Roadmap step 2 done:
+    DaVinci Resolve imports it (alpha clips, levels, transform keyframes, baked transitions and holds) and
+    renders within ~37 dB median PSNR of ours (`resolve_check.py` + `compare_render.py`); only cut-in zoom blur,
+    shakes and the limiter are not reproduced.
+- Fixed while porting: picture lagged sound by a frame after most EDL cuts (ffmpeg rawvideo seek), and EDL
+  times between frames made the picture repeat/skip frames; both affected the Windows renders too.
 - The TOSUMI style is hard-coded in `docs/STYLE.md` and `pipeline/style_default.json`. The skill
   `.claude/skills/reel-subtitles/` is the TOSUMI-specific v0 and will be generalised.
-- One finished reel: `projects/tosumi_hair/` (renders and build files are not in git).
-- No hard-coded Windows paths in the code. Requires ffmpeg, Google Chrome and the Python deps in
-  `pipeline/requirements.txt`.
+- Reels: `projects/tosumi_hair/` (finished, Windows) and `projects/yocase_line/` — second brand (YOCASE, 4
+  shampoos), raw iPhone clips; v4 cut with the videographer skill (`make_script.py` generates its script). Its
+  hook (phone mock-up with the creator cut out, from a reference reel) is the next graphic to build. Renders,
+  footage and build files are not in git.
 - Reference for the code-drawn graphics style the developer wants available:
   `docs/references/claude_unity_sheet.jpg` — contact sheet of a 103 s fully code-generated explainer
   (kinetic type, timer, UI mock-ups, wireframe 3D, terminal typing, waveform, glitch, phone mock-up, diagrams,
@@ -91,10 +110,16 @@ handles mechanics (ADR-0001).
 
 ## Environment
 
-- Development: the developer's Mac M3 Pro (moving off Windows).
+- Development: the developer's Mac M2 Pro 16 GB, macOS 26, Homebrew ffmpeg 9.0.2 (no zscale/libplacebo: HDR
+  tone-mapping needs another route), Python 3.12.
 - Creator: Mac M1 8 GB; the developer's work laptop is available to her as well. Hardware and speed are not
   constraints (ADR-0005).
-- Finishing editor: DaVinci Resolve (free). Final Cut Pro is bought only if DaVinci does not work out.
+- Finishing editor: DaVinci Resolve (free). Final Cut Pro is bought only if DaVinci does not work out. The dev
+  Mac runs the free 21.0.4 build from the Blackmagic website (the App Store build cannot be scripted). Free
+  Resolve refuses external scripting, so `resolve_bridge.lua`, started by hand from Workspace > Scripts, takes
+  Lua from `resolve_client.py` through files; `resolve_check.py` imports, renders and compares automatically.
+  CapCut desktop re-checked on 2026-10-10: still no timeline import; its brand-work terms are a further reason
+  not to target it.
 - Creator's Claude plan: decided by measuring real batches; Max is acceptable.
 - Distribution: private GitHub repository; the creator's machine pulls updates.
 
