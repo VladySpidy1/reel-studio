@@ -27,7 +27,19 @@ render a slot whose checks FAIL. FAIL: a glyph the brand fonts lack, a block OUT
 IG button rail or TOO BIG for the frame, two visible blocks overlapping, letters of two lines colliding, a hook or
 CTA over her face, and (lint.occlusion "fail", the talking-head format) a word hidden by her while it is read.
 WARN: no free spot, a word hidden by her while it is read, text that does not stand out from the picture under it.
+
+Inserts (script "inserts", inserts.py) and brand layers (style.layers) become timeline.json "layers" (layers.py),
+laid out before the blocks: a card insert keeps its visible rect (shadow and ring included) clear of her face, of the
+pinned blocks shown with it, of reserved brand rects and of the crop-safe area, stepping down l -> m -> s for room;
+the blocks then flow around the inserts and reserved brand rects. Full-screen inserts leave occlude_frames and her
+occupancy (she is not on screen). Their sounds join "sfx". FAIL: an insert over her face or a pinned block, outside
+the crop-safe area, a block over an insert, a brand layer outside the crop-safe area, a missing or unusable file.
+style.layers: [{"id", "kind": "image" | "gradient", "z": "under" | "over", "file" (a name in
+brands/<brand>/local/layers/ or a repo path), "x", "y", "w" (image), "y0", "y1", "color", "opacity" (gradient),
+"style": "plain" | "cutout" | "card", "t0", "t1" (null: to the end), "fade", "reserve" (images: true),
+"safe_check" (images: true)}]
 """
+import hashlib
 import json
 import re
 import sys
@@ -40,11 +52,13 @@ from playwright.sync_api import sync_playwright
 
 import camera as cam
 import fontcheck
+import inserts
+import layers
 import resolve
 import text_rules
 import video_pass
 from edl import EDL, VoiceMap
-from common import FPS, H, PIPE, ROOT, W, load_json, norm, save_json, source_path
+from common import FPS, H, PIPE, ROOT, W, load_json, norm, save_json, short, source_path
 
 Q = 4  # masks are quarter resolution
 ESC = {"\\*": "\ue000", "\\_": "\ue001"}            # escaped markup characters, restored in the display text
@@ -289,12 +303,16 @@ def row_fill(m):
     return out
 
 
-def occupancy(masks, camframes, f0, f1):
+def occupancy(masks, camframes, f0, f1, skip=()):
+    """Where she is on screen over output frames f0..f1 (quarter resolution, 0/1); skip: frames she is not shown on
+    (full-screen inserts)."""
     occ = np.zeros((H // Q, W // Q), np.uint8)
     S = np.diag([1 / Q, 1 / Q, 1.0])
     Si = np.diag([Q, Q, 1.0])
     thr = 127 if masks.max() > 1 else 0
     for f in range(max(0, f0), min(len(camframes), f1 + 1)):
+        if f in skip:
+            continue
         m = row_fill((masks[camframes[f]["src_f"]] > thr).astype(np.uint8))
         M = np.vstack([cam.matrix(camframes[f]), [0, 0, 1]])
         Mq = (S @ M @ Si)[:2]
@@ -339,6 +357,13 @@ def person_box(masks, camframes, f):
     return sp[0].min(), sp[1].min(), sp[0].max(), sp[1].max()
 
 
+def window_sum(m, qh, qw):
+    """The sum of m over every qh x qw window, indexed by the window's top-left cell (an integral image)."""
+    Hq, Wq = m.shape
+    ii = np.pad(m.astype(np.int32), ((1, 0), (1, 0))).cumsum(0).cumsum(1)
+    return ii[qh:Hq, qw:Wq] - ii[:Hq - qh, qw:Wq] - ii[qh:Hq, :Wq - qw] + ii[:Hq - qh, :Wq - qw]
+
+
 def solve_block(occ, bw, bh, style, face, pbox, place, text=None):
     """(x, y, warn) of the block's layout box: the cheapest spot clear of occ (her and the other blocks, with
     margins) inside the safe area; with no free spot, the least-covered one ("no free spot"), where a cell of
@@ -364,14 +389,10 @@ def solve_block(occ, bw, bh, style, face, pbox, place, text=None):
     ys = np.arange(0, Hq - qh)
     xs = np.arange(0, Wq - qw)
     Y, X = np.meshgrid(ys, xs, indexing="ij")
-
-    def window_sum(m):
-        ii = np.pad(m.astype(np.int32), ((1, 0), (1, 0))).cumsum(0).cumsum(1)
-        return ii[Y + qh, X + qw] - ii[Y, X + qw] - ii[Y + qh, X] + ii[Y, X]
-    cnt = window_sum(occ)
+    cnt = window_sum(occ, qh, qw)
     if text is not None and text.any():
-        cnt = cnt + (TEXT_W - 1) * window_sum(text)
-    out = window_sum(block)          # cells outside the safe area or inside an exclusion
+        cnt = cnt + (TEXT_W - 1) * window_sum(text, qh, qw)
+    out = window_sum(block, qh, qw)  # cells outside the safe area or inside an exclusion
     # preferences (screen px)
     px, py = X * Q, Y * Q
     fx, fy, fw, fh = face
@@ -411,6 +432,254 @@ def solve_block(occ, bw, bh, style, face, pbox, place, text=None):
     return int(px[j]), int(py[j]), warn
 
 
+# ----------------------------------------------------------------------------- inserts and brand layers
+
+def qmark(m, r, v, touch=True):
+    """Set the cells of rect r [x0, y0, x1, y1] (screen px) in the quarter-resolution mask m to v: every cell the rect
+    touches, or (touch False) only the cells wholly inside it."""
+    if touch:
+        x0, y0, x1, y1 = np.floor(r[0] / Q), np.floor(r[1] / Q), np.ceil(r[2] / Q), np.ceil(r[3] / Q)
+    else:
+        x0, y0, x1, y1 = np.ceil(r[0] / Q), np.ceil(r[1] / Q), np.floor(r[2] / Q), np.floor(r[3] / Q)
+    m[max(0, int(y0)):max(0, int(y1)), max(0, int(x0)):max(0, int(x1))] = v
+
+
+def grow(r, d):
+    return [int(np.floor(r[0] - d)), int(np.floor(r[1] - d)), int(np.ceil(r[2] + d)), int(np.ceil(r[3] + d))]
+
+
+def outside(r, safe):
+    return r[0] < safe[0] or r[1] < safe[1] or r[2] > safe[2] or r[3] > safe[3]
+
+
+def ink_rect(sprite, pad):
+    """What a viewer sees of a layer's sprite (alpha >= 5 %: the shadow and the ring count) relative to its picture's
+    top-left: [x0, y0, x1, y1]."""
+    a = cv2.imread(str(ROOT / sprite), cv2.IMREAD_UNCHANGED)[:, :, 3]
+    ys, xs = np.nonzero(a >= 13)
+    if len(xs) == 0:
+        return [0, 0, 0, 0]
+    return [int(xs.min()) - pad, int(ys.min()) - pad, int(xs.max()) + 1 - pad, int(ys.max()) + 1 - pad]
+
+
+def pinned_rect(place, bb, L):
+    """The rect a pinned block holds, which inserts keep out of: its own safe box within the global one, or its
+    measured box (bb) at a hand-placed x and y; None for a block the solver places."""
+    if "safe" in place:
+        gx0, gy0, gx1, gy1 = L["safe"]
+        x0, y0, x1, y1 = place["safe"]
+        return [max(x0, gx0), max(y0, gy0), min(x1, gx1), min(y1, gy1)]
+    if "x" in place and "y" in place:
+        x = int(round(W / 2 - bb["w"] / 2)) if place["x"] == "center" else place["x"]
+        return [x, place["y"], x + bb["w"], place["y"] + bb["h"]]
+    return None
+
+
+def pinned_blocks(screens, sizes, L):
+    """[(rect, t_first, t_end)]: the pinned blocks (pinned_rect) with their first word and their end."""
+    out = []
+    for sc in screens:
+        for b in sc["blocks"]:
+            r = pinned_rect({**sc.get("place", {}), **b.get("place", {})}, sizes[b["id"]], L)
+            if r:
+                out.append((r, min(tok["t"] for ln in b["lines"] for tok in ln["tokens"]),
+                            b.get("t1", min(sc["t1"], b.get("until", sc["t1"])))))
+    return out
+
+
+def place_insert(out, avoid, occ, w, ext, ist, place):
+    """(x, y, problem): the top-left of a card insert's picture (w px wide) at the cheapest spot where its visible rect
+    (ext: ink_rect) stays inside the safe area (`out`: 1 outside it and on exclusions) and clear of every mask in
+    `avoid` (insert_masks: her face, pinned blocks, reserved brand rects), quarter-resolution 0/1 masks. Cost: the
+    share of the rect her matte covers (occ) x person_cost, |y - prefer_y| and 0.5 |centre - frame centre| (or the
+    distances to place "x" and "y", a soft preference). With no such spot: inside the safe area when it fits there,
+    the least face overlap, then the least overlap of the rest; problem names what it covers ("face",
+    "face/subtitles", ...) or is "OUTSIDE"."""
+    ex0, ey0, ex1, ey1 = ext
+    qw, qh = int(np.ceil((ex1 - ex0) / Q)), int(np.ceil((ey1 - ey0) / Q))
+    Hq, Wq = out.shape
+    if qw >= Wq or qh >= Hq:
+        return int(round((W - w) / 2)), 0, "OUTSIDE"
+    Y, X = np.meshgrid(np.arange(0, Hq - qh), np.arange(0, Wq - qw), indexing="ij")
+    px, py = X * Q - ex0, Y * Q - ey0
+    n_out = window_sum(out, qh, qw)
+    hits = {k: window_sum(m, qh, qw) for k, m in avoid.items()}
+    cost = window_sum(occ, qh, qw) / (qw * qh) * ist["person_cost"] + np.abs(py - place.get("y", ist["prefer_y"]))
+    x_pref = (W - w) / 2 if place.get("x", "center") == "center" else place["x"]
+    cost = cost + (np.abs(px - x_pref) if "x" in place else 0.5 * np.abs(px - x_pref))
+    free = (n_out == 0) & np.logical_and.reduce([n == 0 for n in hits.values()])
+    if free.any():
+        j = np.unravel_index(np.argmin(np.where(free, cost, np.inf)), cost.shape)
+        return int(px[j]), int(py[j]), None
+    inside = n_out == 0
+    c = cost + sum((1e6 if k == "face" else 400.0) * n for k, n in hits.items())
+    if inside.any():
+        c = np.where(inside, c, np.inf)
+    j = np.unravel_index(np.argmin(c), c.shape)
+    problem = "/".join(k for k, n in hits.items() if n[j])
+    return int(px[j]), int(py[j]), problem if inside.any() and problem else "OUTSIDE"
+
+
+def insert_masks(style, place, f0, f1, keep_out, pinned, camera, track, edl, masks, full=()):
+    """The quarter-resolution 0/1 masks a card insert shown on output frames f0..f1 (exclusive) is placed on:
+    (out: outside the safe area within place.safe, layout and place exclusions; avoid {"face": her face over the span
+    (face_boxes, boxes under min_face_px dropped) plus face_margin, "subtitles": the pinned blocks [(rect, t0, t1)]
+    shown with it plus margin_text, "brand layers": the keep_out rects [(rect, t0, t1, id)] shown with it}; occ: her
+    matte over the span)."""
+    L, ist = style["layout"], inserts.insert_style(style)
+    t0, t1 = f0 / FPS, f1 / FPS
+    out = np.ones((H // Q, W // Q), np.uint8)
+    sx0, sy0, sx1, sy1 = place.get("safe", L["safe"])
+    gx0, gy0, gx1, gy1 = L["safe"]
+    qmark(out, [max(sx0, gx0), max(sy0, gy0), min(sx1, gx1), min(sy1, gy1)], 0, touch=False)
+    for r in L["exclude"] + place.get("exclude", []):
+        qmark(out, r, 1)
+    avoid = {k: np.zeros_like(out) for k in ("face", "subtitles", "brand layers")}
+    fb = face_boxes(track, camera["frames"], edl, f0, f1 - 1, ist["min_face_px"])
+    if fb:
+        qmark(avoid["face"], grow(fb, L.get("face_margin", 40)), 1)
+    for r, a, b in pinned:
+        if a < t1 and t0 < b:
+            qmark(avoid["subtitles"], grow(r, ist["margin_text"]), 1)
+    for r, a, b, _ in keep_out:
+        if a < t1 and t0 < b:
+            qmark(avoid["brand layers"], r, 1)
+    return out, avoid, occupancy(masks, camera["frames"], f0, f1 - 1, full)
+
+
+def brand_file(name, brand):
+    """A brand layer's file: a name in brands/<brand>/local/layers/ (licensed, never in git), else a repo path."""
+    for p in ([ROOT / "brands" / brand / "local" / "layers" / name] if brand else []) + [ROOT / name]:
+        if name and p.is_file():
+            return p
+    return None
+
+
+LAYER = {"id": None, "cat": None, "mode": "overlay", "z": "under", "f0": 0, "f1": 0, "x": 0, "y": 0, "w": W, "h": H,
+         "sprite": None, "pad": 0, "anim": None, "exit": 0, "rides": False, "media": None, "kind": "still",
+         "src_f0": None, "n_media": None, "creep": 0, "focus": None, "sfx": None, "sfx_gain": None, "label": ""}
+
+
+def layer(**kw):
+    """A timeline layer (layers.py) with every key, in the documented order."""
+    return {k: kw.get(k, v) for k, v in LAYER.items()}
+
+
+def brand_layers(script, style, n_frames, sprites, check):
+    """style.layers as timeline layers: (layers, keep_out [(visible rect, t0, t1, id)] of the reserved ones, report
+    lines). A brand layer is screen-locked; OUTSIDE the crop-safe area (safe_check) is a FAIL."""
+    L, ist = style["layout"], inserts.insert_style(style)
+    lay, keep_out, lines = [], [], []
+    for k, spec in enumerate(style.get("layers") or []):
+        name, kind = str(spec.get("id", k)), spec.get("kind", "image")
+        f0 = max(0, int(round(spec.get("t0", 0) * FPS)))
+        f1 = n_frames if spec.get("t1") is None else min(n_frames, int(round(spec["t1"] * FPS)))
+        if kind == "gradient":
+            sp, pad = layers.style_sprite(None, "gradient", spec)
+            key = json.dumps([spec.get(k_) for k_ in ("y0", "y1", "color", "opacity")])
+            path = sprites / f"gradient_{hashlib.sha1(key.encode()).hexdigest()[:16]}.png"
+            if not path.is_file():
+                sprites.mkdir(parents=True, exist_ok=True)
+                cv2.imwrite(str(path), sp)
+            sprite, x, y, w, h = short(path), 0, int(spec["y0"]), W, int(spec["y1"]) - int(spec["y0"])
+        elif kind == "image":
+            src = brand_file(spec.get("file", ""), script.get("brand"))
+            img = cv2.imread(str(src), cv2.IMREAD_UNCHANGED) if src else None
+            if img is None:
+                check("fail", f"brand layer {name}: file {spec.get('file')!r} is not in brands/{script.get('brand')}/"
+                              f"local/layers/ or the repo (brand assets are copied in person, not pulled)")
+                continue
+            w = int(spec.get("w", img.shape[1]))
+            h = int(round(w * img.shape[0] / img.shape[1]))
+            sprite, pad = layers.sprite_file(short(src), spec.get("style", "plain"), ist, w, h, None, sprites)
+            x, y = int(spec.get("x", 0)), int(spec.get("y", 0))
+        else:
+            check("fail", f"brand layer {name}: kind {kind!r}; use image or gradient")
+            continue
+        e = ink_rect(sprite, pad)
+        vis = [x + e[0], y + e[1], x + e[2], y + e[3]]
+        fade = spec.get("fade", 0)
+        lay.append(layer(id=f"brand_{name}", cat="brand", z=spec.get("z", "under"), f0=f0, f1=f1, x=x, y=y, w=w, h=h,
+                         sprite=sprite, pad=pad, exit=fade if fade and f1 < n_frames else 0, label=f"brand {name}",
+                         anim={"dur": fade, "opacity": [[0, 0], [1, 1]]} if fade and f0 else None))
+        flag = ""
+        if spec.get("safe_check", kind == "image") and outside(vis, L["safe"]):
+            flag = "  !! OUTSIDE"
+            check("fail", f"brand layer {name}: OUTSIDE the IG crop-safe area (visible {vis}; safe {L['safe']}): a "
+                          f"phone crops it, move it in")
+        if spec.get("reserve", kind == "image"):
+            keep_out.append((vis, f0 / FPS, f1 / FPS, f"brand_{name}"))
+        lines.append(f"{f0 / FPS:6.2f}-{f1 / FPS:6.2f} brand_{name} {kind} {spec.get('z', 'under')} at ({x},{y}) "
+                     f"{w}x{h}{flag}")
+    return lay, keep_out, lines
+
+
+def insert_layers(script, script_path, style, heard, duration, screens, sizes, camera, track, edl, masks, keep_out,
+                  check):
+    """The script's inserts as timeline layers, placed before the subtitle blocks: (layers, keep_out extended by the
+    card rects, full-screen frames, report lines). A card keeps clear of her face, of the pinned blocks shown with it,
+    of keep_out (reserved brand rects) and of the crop-safe area, stepping down l -> m -> s for room."""
+    L, ist = style["layout"], inserts.insert_style(style)
+    sprites = inserts.inserts_dir(script) / "sprites"
+    inv = inserts.prepare(script, script_path,
+                          [i for i in script["inserts"] if i.get("mode") == "full" and i.get("file")])
+    items, fails, warns = inserts.resolve_times(script, heard, duration, style, inv)
+    for level, found in (("fail", fails), ("warn", warns)):
+        for t, m in found:
+            check(level, f"ins {m} [{t:.2f} s]")
+    pinned = pinned_blocks(screens, sizes, L)
+    widths = sorted(ist["widths"], key=ist["widths"].get, reverse=True)
+    lay, full, lines = [], set(), []
+    for it in items:
+        e = inv["files"].get(it["path"], {})
+        t0, t1 = it["f0"] / FPS, it["f1"] / FPS          # on screen, frame-exact
+        what = f"«{it['phrase']['text']}»" if it["phrase"] else f"at {it['t0']:.2f} s"
+        when = f"{it['t0']:6.2f}-{it['t1']:6.2f} {it['id']}"
+        base = {k: it[k] for k in ("id", "cat", "mode", "z", "f0", "f1", "anim", "exit", "rides", "kind", "media",
+                                   "creep", "focus", "sfx", "sfx_gain", "label")}
+        sound = f"sfx {it['sfx']}" if it["sfx"] else "silent"
+        if it["mode"] == "full":
+            if it["kind"] == "video":
+                if not it["media"]:
+                    check("fail", f"ins {it['id']} {it['file']}: the video was not converted [{t0:.2f} s]")
+                    continue
+                base.update(src_f0=0, n_media=next((c["n_frames"] for c in e.get("converted", [])
+                                                    if c["file"] == it["media"]), it["n_media"]))
+            lay.append(layer(**base))
+            full |= set(range(it["f0"], it["f1"]))
+            lines.append(f"{when} full-screen {it['kind']}  {sound}  | {it['file']} {what}")
+            continue
+        pl = it["place"]
+        out, avoid, occ = insert_masks(style, pl, it["f0"], it["f1"], keep_out, pinned, camera, track, edl, masks, full)
+        tries = [it["size"]] + [s for s in widths if it["size"] and ist["widths"][s] < ist["widths"][it["size"]]]
+        for k, size in enumerate(tries):
+            w, h = (it["w"], it["h"]) if k == 0 else inserts.fit(it["aspect"], ist["widths"][size], ist)
+            sprite, pad = layers.sprite_file(e["png"], it["style"], ist, w, h, it["crop"], sprites)
+            ext = ink_rect(sprite, pad)
+            x, y, problem = place_insert(out, avoid, occ, w, ext, ist, pl)
+            if problem is None:
+                break
+        vis = [x + ext[0], y + ext[1], x + ext[2], y + ext[3]]
+        flags = []
+        if problem == "OUTSIDE":
+            flags.append("OUTSIDE")
+            check("fail", f"ins {it['id']} {it['file']}: no spot inside the IG crop-safe area for {w}x{h} "
+                          f"[{t0:.2f}-{t1:.2f} s]: crop, size s, or на весь екран")
+        elif problem:
+            flags.append(f"over the {problem}")
+            check("fail", f"ins {it['id']} {it['file']}: no spot clear of the {problem} [{t0:.2f}-{t1:.2f} s]: "
+                          f"unpin a block, crop, size s, or на весь екран")
+        elif k:
+            flags.append(f"size {it['size']} -> {size}")
+            check("warn", f"ins {it['id']} {it['file']}: size {it['size']} -> {size}, no room for {it['size']} "
+                          f"[{t0:.2f} s]")
+        lay.append(layer(**base, x=x, y=y, w=w, h=h, sprite=sprite, pad=pad))
+        keep_out.append((vis, t0, t1, it["id"]))
+        lines.append(f"{when} at ({x},{y}) {w}x{h} {it['style']}{' ' + size if size else ''}  {sound}"
+                     f"{'  !! ' + '; '.join(flags) if flags else ''}  | {it['file']} {what}")
+    return lay, keep_out, full, lines
+
+
 def measure(timeline):
     with sync_playwright() as p:
         b = p.chromium.launch()
@@ -425,12 +694,14 @@ def measure(timeline):
 # ----------------------------------------------------------------------------- readability checks
 # The occlusion and contrast rules follow HyperFrames' `check` (Apache-2.0, see NOTICE).
 
-def word_cover(masks, camframes, words, f_end, thr):
+def word_cover(masks, camframes, words, f_end, thr, skip=()):
     """The share of each word's box (screen px) her matte covers, averaged over the frames from the word's reveal
-    to f_end (the end of the block's reading time)."""
+    to f_end (the end of the block's reading time); skip: frames she is not shown on (full-screen inserts)."""
     acc, n = np.zeros(len(words)), np.zeros(len(words))
     fw = [int(w["t"] * FPS) for w in words]
     for f in range(max(0, min(fw, default=f_end)), min(len(camframes), f_end)):
+        if f in skip:
+            continue
         m = matte_q(masks, camframes, f, thr)
         for k, w in enumerate(words):
             if f < fw[k]:
@@ -582,6 +853,16 @@ def main(script_path, script=None):
     face = cam.face_track(track)
     L = style["layout"]
     face_margin = L.get("face_margin", 40)
+    # brand layers and inserts first: the blocks flow around them (keep_out: their visible rects with their spans)
+    heard = VoiceMap(edl, script.get("audio")).heard_words(load_json(ROOT / script["words"]))
+    sprites = inserts.inserts_dir(script) / "sprites"
+    lay, keep_out, lay_lines = brand_layers(script, style, n_frames, sprites, check)
+    full = set()                       # full-screen insert frames: she is not on screen
+    if script.get("inserts"):
+        ins_lay, keep_out, full, ins_lines = insert_layers(script, script_path, style, heard, duration, screens, sizes,
+                                                           camera, track, edl, masks, keep_out, check)
+        lay, lay_lines = lay + ins_lay, lay_lines + ins_lines
+    margin_text = inserts.insert_style(style)["margin_text"]
     report, geo = {}, {}
     placed = []                        # every placed block (x, y, w, h, t_first, t_end): a CTA outlives its screen
     # preset blocks (hook, CTA) first: the subtitles make room for them
@@ -597,6 +878,10 @@ def main(script_path, script=None):
         place = {**sc.get("place", {}), **b.get("place", {})}
         if place.get("x") == "center":
             place["x"] = int(round(W / 2 - bb["w"] / 2))
+        near = [(r, lid) for r, a, b_, lid in keep_out if a < t_end and t_first < b_]
+        if near:                       # a new list: the merged place shares the script's own exclude list
+            place["exclude"] = list(place.get("exclude", [])) + [[max(0, v) for v in grow(r, margin_text)]
+                                                                 for r, _ in near]
         # text-behind-subject: she may walk in front of the block once it has been read
         t_read = min(t_end, t_last + style["layout"].get("read_time", 0.9))
         t_free = t_read if behind else t_end
@@ -609,7 +894,7 @@ def main(script_path, script=None):
                                                    fbox[2] + face_margin, fbox[3] + face_margin)]
             occ[max(0, fy0 // Q):max(0, fy1 // Q + 1), max(0, fx0 // Q):max(0, fx1 // Q + 1)] = 1
         else:
-            occ = occupancy(masks, camera["frames"], f0, f1)
+            occ = occupancy(masks, camera["frames"], f0, f1, full)
         text_q = np.zeros_like(occ)
         for (x, y, w, h, pa, pb) in placed:          # other blocks visible at the same time
             if pa < t_end and t_first < pb:
@@ -620,7 +905,8 @@ def main(script_path, script=None):
         M = cam.matrix(fr)
         sfx, sfy = M @ np.array([fx, fy, 1.0])
         fs = 80 * fr["s"]
-        boxes = [person_box(masks, camera["frames"], f) for f in range(f0, max(f0 + 1, min(f1, f0 + 24)), 3)]
+        boxes = [person_box(masks, camera["frames"], f) for f in range(f0, max(f0 + 1, min(f1, f0 + 24)), 3)
+                 if f not in full]
         boxes = [bx for bx in boxes if bx is not None]
         pbox = (min(bx[0] for bx in boxes), min(bx[1] for bx in boxes),
                 max(bx[2] for bx in boxes), max(bx[3] for bx in boxes)) if boxes else None
@@ -628,6 +914,10 @@ def main(script_path, script=None):
                                  text_q)
         w_, h_ = int(bb["w"]), int(bb["h"])
         placed.append((x, y, w_, h_, t_first, t_end))
+        for r, lid in near:            # the solver gives up on exclusions when the block's own safe box is covered
+            if x < r[2] and r[0] < x + w_ and y < r[3] and r[1] < y + h_:
+                check("fail", f"overlaps {'brand layer' if lid.startswith('brand_') else 'insert'} {lid}: unpin or "
+                              f"move the block, or move the insert", b, t_first)
         b["x"] = x - bb["x"]
         b["y"] = y - bb["y"]
         t0r, t1r = b.get("t0", sc["t0"]), b.get("t1", sc["t1"])
@@ -635,7 +925,8 @@ def main(script_path, script=None):
         # over her)
         words_s = [{**w, "x": w["x"] + b["x"], "y": w["y"] + b["y"]} for w in measured[b["id"]]["words"]]
         f_read = int(np.ceil(t_read * FPS))
-        cover = word_cover(masks, camera["frames"], words_s, f_read, thr) if behind and words_s else [0.0] * len(words_s)
+        cover = word_cover(masks, camera["frames"], words_s, f_read, thr, full) if behind and words_s else \
+            [0.0] * len(words_s)
         geo[b["id"]] = {"b": b, "sc": sc, "x": x, "y": y, "w": w_, "h": h_, "t_first": t_first, "t_last": t_last,
                         "t_end": t_end, "behind": behind, "words": words_s}
         if warn == "no free spot":
@@ -677,8 +968,8 @@ def main(script_path, script=None):
                 check("fail", f"letters of lines {li + 1} and {lj + 1} collide ({n} px): raise the leading or split "
                               f"the block", b, t_first)
     occl = sorted({f for sc in screens if any(b.get("behind") for b in sc["blocks"])
-                   for f in range(int(sc["t0"] * FPS), int(np.ceil(sc["t1"] * FPS)))})
-    timeline["occlude_frames"] = occl
+                   for f in range(int(sc["t0"] * FPS), int(np.ceil(sc["t1"] * FPS)))} - full)
+    timeline["occlude_frames"] = occl          # full-screen frames have no person to cut the text
     # the front layer: frames that show a behind:false block while a screen with a behind block is on (her matte
     # cuts the whole picture there, even after that behind block left through until/t1); the front block is drawn
     # over her, uncut. A screen's first occl frame can still belong to the screen before it: not counted
@@ -690,7 +981,8 @@ def main(script_path, script=None):
     front = sorted(set().union(*[shown(g) for g in geo.values() if g["behind"] is False]) & on_back & set(occl))
     if front:
         timeline["front_frames"] = front
-    timeline["sfx"] = info["sfx"]         # automatic cues (CTA chime, insert pops and whooshes), from sfx_palette
+    timeline["sfx"] = info["sfx"] + layers.cues(lay)     # automatic cues (CTA chime, insert pops and whooshes)
+    timeline["layers"] = lay
 
     # checks over the whole layout
     gs = sorted(geo.values(), key=lambda g: int(g["b"]["id"][1:]))
@@ -716,12 +1008,14 @@ def main(script_path, script=None):
         gr = video_pass.Grade(script.get("grade"))
         src = source_path(script)
         sources = [video_pass.FrameSource(src), video_pass.FrameSource(src)]
+        comp = layers.Compositor([l for l in lay if l["mode"] == "full"])     # the picture on full-screen frames
         weak = []
         try:
             for f, g in samples:
-                img = cv2.resize(gr(video_pass.picture(camera["frames"], f, sources)), (W // Q, H // Q),
-                                 interpolation=cv2.INTER_AREA)
-                matte = matte_q(masks, camera["frames"], f, thr) if g["behind"] else None
+                pic = comp.full(f) if f in full else None
+                img = cv2.resize(gr(video_pass.picture(camera["frames"], f, sources)) if pic is None else pic,
+                                 (W // Q, H // Q), interpolation=cv2.INTER_AREA)
+                matte = matte_q(masks, camera["frames"], f, thr) if g["behind"] and f not in full else None
                 for msg in contrast_findings(img, g["words"], matte, ring, g["b"].get("stroke")):
                     check("warn", msg, g["b"], f / FPS, own_line=False)
                     lines_out.append(f"   {g['b']['id']} {f / FPS:.2f}s {msg}")      # the log keeps the details
@@ -729,6 +1023,7 @@ def main(script_path, script=None):
         finally:
             for s_ in sources:
                 s_.close()
+            comp.close()
         if weak:                       # one summary line: the white-on-beige case hits many blocks at once
             ids_ = list(dict.fromkeys(weak))
             lines_out.append(f"!! WARN contrast: {len(ids_)} blocks hard to read over the picture ({', '.join(ids_[:8])}"
@@ -736,7 +1031,6 @@ def main(script_path, script=None):
                              f"in the log)")
 
     # what the text layer did, for the final report
-    heard = VoiceMap(edl, script.get("audio")).heard_words(load_json(ROOT / script["words"]))
     triggers = text_rules.cta_triggers(heard, rules)
 
     def card(g):
@@ -758,7 +1052,7 @@ def main(script_path, script=None):
     save_json(timeline, build_dir / "timeline.json")
     save_json(meta, build_dir / "meta.json")
     sys.stdout.reconfigure(encoding="utf-8")
-    print("\n".join(report[b["id"]] for sc in screens for b in sc["blocks"]))
+    print("\n".join([report[b["id"]] for sc in screens for b in sc["blocks"]] + lay_lines))
     print("\n".join(lines_out + [f"checks: {len(checks['fail'])} FAIL, {len(checks['warn'])} WARN"]))
 
 

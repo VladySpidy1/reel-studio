@@ -225,13 +225,20 @@ class Compositor:
 
     def _placed(self, layer, sc, ovm):
         """The layer's (premultiplied colour, alpha, x, y) for one frame: the sprite itself at rest, else warped
-        (premultiplied, so edges do not darken) to a full frame."""
+        (premultiplied, so edges do not darken) into the on-screen box it lands in (not a full frame: 8 GB RAM)."""
         prem, a = self._sprite(layer)
         if sc == 1 and ovm is None:
             return prem, a, int(round(layer["x"])) - layer["pad"], int(round(layer["y"])) - layer["pad"]
         M = self._matrix(layer, sc, ovm)
+        h, w = a.shape
+        c = M @ np.array([[0, w, 0, w], [0, 0, h, h], [1, 1, 1, 1]], np.float64)
+        x0, y0 = max(0, int(np.floor(c[0].min())) - 1), max(0, int(np.floor(c[1].min())) - 1)
+        x1, y1 = min(W, int(np.ceil(c[0].max())) + 2), min(H, int(np.ceil(c[1].max())) + 2)
+        if x1 <= x0 or y1 <= y0:
+            return prem[:0, :0], a[:0, :0], 0, 0
+        T = M - [[0, 0, x0], [0, 0, y0]]
         kw = dict(flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)
-        return cv2.warpAffine(prem, M, (W, H), **kw), cv2.warpAffine(a, M, (W, H), **kw), 0, 0
+        return cv2.warpAffine(prem, T, (x1 - x0, y1 - y0), **kw), cv2.warpAffine(a, T, (x1 - x0, y1 - y0), **kw), x0, y0
 
     def _still(self, layer):
         """A full-screen picture cover-cropped once to 1080x1920 about focus (transparent parts on black)."""

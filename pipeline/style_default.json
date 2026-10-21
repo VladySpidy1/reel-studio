@@ -72,5 +72,34 @@
     "left_snap": 0.5
   },
   "word_space": -0.07,
-  "accent_gap_after": 0.2
+  "accent_gap_after": 0.2,
+  "insert": {
+    "widths": {
+      "s": 315,
+      "m": 430,
+      "l": 580
+    },
+    "max_w": 700,
+    "max_h": 900,
+    "min_dur": 1.5,
+    "hold": 0.5,
+    "full_min_dur": 1.0,
+    "full_creep": 0.015,
+    "anim": "snap",
+    "exit": 0.13,
+    "radius": 12,
+    "border_px": 1,
+    "border": "#111111",
+    "shadow": {
+      "dy": 6,
+      "blur": 22,
+      "alpha": 0.3
+    },
+    "outline": "#111111",
+    "margin_text": 20,
+    "min_face_px": 120,
+    "person_cost": 600,
+    "prefer_y": 260
+  },
+  "layers": []
 }

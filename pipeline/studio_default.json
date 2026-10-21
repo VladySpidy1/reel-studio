@@ -21,7 +21,13 @@
                  {"name": "pop_03_bubble_b", "gain_db": -20}],
     "tick": [{"name": "click_01_tick", "gain_db": -22}],
     "hero": [{"name": "camera_shutter_01", "gain_db": -10}],
-    "cta": [{"name": "ding_02_soft_chime", "gain_db": -18}]
+    "cta": [{"name": "ding_02_soft_chime", "gain_db": -18}],
+    "insert_card": [{"name": "whoosh_quick_03_swish", "gain_db": -14},
+                    {"name": "whoosh_soft_02_wind_swoosh", "gain_db": -14}],
+    "insert_cutout": [{"name": "pop_04_light", "gain_db": -20}, {"name": "pop_02_bubble_a", "gain_db": -20},
+                      {"name": "pop_03_bubble_b", "gain_db": -20}],
+    "insert_full": [{"name": "whoosh_soft_01_air_sweep", "gain_db": -12},
+                    {"name": "whoosh_quick_03_swish", "gain_db": -12}]
   },
   "sfx_banned": [],
   "lint": {

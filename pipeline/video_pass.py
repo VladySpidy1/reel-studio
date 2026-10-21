@@ -1,6 +1,6 @@
 """Video pass: decode source, apply per-frame camera (zoom / pan / shake / zoom-blur
 transitions), per-take white-balance gains, a light grade, composite the subtitle overlay
-PNGs (with text-behind-subject matte), and encode.
+PNGs (with text-behind-subject matte), the inserts and brand layers (layers.py, outside the matte), and encode.
 
 Frames are processed in parallel segments (each with its own decoder/encoder), then
 concatenated losslessly and muxed with the audio mix.
@@ -18,6 +18,7 @@ import cv2
 import numpy as np
 
 import camera
+import layers
 from common import BUILD, FPS, H, W, load_json
 
 PRESET = os.environ.get("X264_PRESET", "slow")
@@ -257,6 +258,13 @@ def segment(a, b, cam, out_path, overlay_dir, timeline_path, masks_path, grade, 
                 img = cv2.blendLinear(img, np.ascontiguousarray(bgra[:, :, :3]), 1 - a, a)
             return img
         slots["front"] = front_slot
+    comp = layers.Compositor(tl.get("layers", []))       # inserts and brand layers (one per process: it holds decoders)
+    if comp.fulls:
+        slots["full"] = comp.full
+    if comp.by_z["under"]:          # brand "under" layers, then the card insert, which rides the text's transition
+        slots["under"] = lambda img, i, fr: comp.composite(img, i, "under", fr.get("ovm"))
+    if comp.by_z["over"]:
+        slots["over"] = lambda img, i, fr: comp.composite(img, i, "over")
     sources = [FrameSource(src), FrameSource(src)]      # the second one feeds the incoming shot of a push
     enc = subprocess.Popen(
         ["ffmpeg", "-nostdin", "-v", "error", "-y",
@@ -273,6 +281,7 @@ def segment(a, b, cam, out_path, overlay_dir, timeline_path, masks_path, grade, 
     enc.wait()
     for s_ in sources:
         s_.close()
+    comp.close()
     if enc.returncode:
         raise SystemExit(f"encoder failed for segment {a}-{b}")
 

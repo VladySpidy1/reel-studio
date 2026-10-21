@@ -27,8 +27,9 @@ MIN_GAP = 15                          # frames between two event moves
 WHOOSH = re.compile(r"whoosh|swish|swoosh")
 DESIGNED = ("push", "zoom_through", "spin")
 # the features' own checks, (module, function): function(script, ctx) -> (fails, warns), lists of (t, msg); ctx has
-# the edl, the output takes, the camera frames and the cue list ("cues"), which the check may extend. A module or
-# function that does not exist yet is skipped.
+# the edl, the output takes, the camera frames and the cue list ("cues"), which the check may extend, and it may add
+# "changes" (times of visible changes, such as inserts, for the dead-span check). A module or function that does not
+# exist yet is skipped.
 HOOKS = (("text_rules", "lint_text"), ("inserts", "lint_inserts"), ("trim", "lint_audio"))
 
 
@@ -183,8 +184,9 @@ def lint(script):
             warn(0, f"{a} twice in a row; rotate samples")
             break
 
-    # no dead spans: a cut, a transition, a punch, a flash or an A/B change at least every few seconds
-    changes = sorted(set(cuts) | set(tr_at) | {p["t"] for p in spec.get("punches", [])} | set(flashes) | {0.0, edl.duration})
+    # no dead spans: a cut, a transition, a punch, a flash, an insert or an A/B change at least every few seconds
+    changes = sorted(set(cuts) | set(tr_at) | {p["t"] for p in spec.get("punches", [])} | set(flashes)
+                     | set(ctx.get("changes", [])) | {0.0, edl.duration})
     for a, b in zip(changes, changes[1:]):
         if P["dead_span"] is not None and b - a > P["dead_span"]:
             warn(a, f"{b - a:.1f} s with no visible change (cut, punch, transition); add one by {a + 3:.1f} s")

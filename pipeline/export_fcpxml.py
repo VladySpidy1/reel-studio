@@ -12,6 +12,9 @@ output/<name>_project/<name>.fcpxml plus media/ (self-contained: source clips, S
   - camera freezes (picture stops, voice runs on): a still clip on the lane above the take
   - camera flashes: white ProRes 4444 clips with alpha
   - every subtitle block and doodle: its own ProRes 4444 clip with alpha, text-behind-subject baked in
+  - every card insert and brand layer (timeline "layers"): its own ProRes 4444 clip with alpha, streamed one frame
+    at a time; a full-screen video insert is its converted clip (no sound) on the lane above the takes, a full-screen
+    picture a baked ProRes clip
   - SFX and music: separate audio clips with their levels; one shared gain brings the mix to the
     same loudness as the draft MP4 (no limiter). SFX and music that are not 48 kHz stereo WAV (her mp3/m4a) are
     converted into media/<stem>.wav. The music is build/<name>_music.wav, the music as the MP4 mixed it: fades,
@@ -44,6 +47,7 @@ import numpy as np
 
 import build
 import camera as cam_mod
+import layers
 import resolve
 import video_pass
 from common import (BUILD, FPS, H, OUT, PIPE, ROOT, W, default_procs, keep_awake, load_json, reel_id, require_slot,
@@ -157,6 +161,36 @@ def render_layer(job):
     return name, (f0, f1 - f0 + 1)
 
 
+def write_layer(layer, out):
+    """One card insert or brand layer as a ProRes 4444 alpha clip of its frames f0..f1, streamed into the encoder (one
+    frame in RAM, unlike render_layer): (f0, n). Its moves in transitions are keyframes, as for text."""
+    comp = layers.Compositor([layer])
+    n = layer["f1"] - layer["f0"]
+
+    def gen():
+        for i in range(layer["f0"], layer["f1"]):
+            im = comp.rgba(layer, i)
+            if ALPHA == "premultiplied":
+                im[:, :, :3] = (im[:, :, :3].astype(np.float32) * (im[:, :, 3:4] / 255.0)).round().astype(np.uint8)
+            yield im
+    try:
+        encode(gen(), out, n, alpha=True)
+    finally:
+        comp.close()
+    return layer["f0"], n
+
+
+def write_full(layer, out):
+    """A full-screen picture insert (cover-cropped, its creep) as a ProRes 422 clip: (f0, n)."""
+    comp = layers.Compositor([layer])
+    n = layer["f1"] - layer["f0"]
+    try:
+        encode((comp.full(i) for i in range(layer["f0"], layer["f1"])), out, n, alpha=False)
+    finally:
+        comp.close()
+    return layer["f0"], n
+
+
 # ----------------------------------------------------------------------------- camera -> transform keyframes
 
 def matrix_vals(m):
@@ -267,7 +301,7 @@ def main():
     ap.add_argument("--name", default="")
     ap.add_argument("--freeze", default="baked", choices=["baked", "png", "timemap"])
     ap.add_argument("--procs", type=int, default=default_procs(), help="render processes (default: 2 on 8 GB RAM, else 4)")
-    ap.add_argument("--skip-layers", action="store_true", help="reuse rendered block/doodle clips")
+    ap.add_argument("--skip-layers", action="store_true", help="reuse rendered block, doodle, insert and brand clips")
     ap.add_argument("--force", action="store_true", help="developer only: export although build/ holds another reel")
     ap.add_argument("--verbose", action="store_true", help="the full output on the terminal (it is always in the log)")
     a = ap.parse_args()
@@ -516,7 +550,6 @@ def export(a, name):
     else:
         with Pool(a.procs) as pool:
             placed = dict(pool.map(render_layer, [j[:7] for j in jobs]))
-        layer_meta.write_text(json.dumps(placed), encoding="utf-8")
     for nm, _, _, path, _, _, _, text in jobs:
         if placed.get(nm):
             f0, n = placed[nm]
@@ -526,9 +559,26 @@ def export(a, name):
         else:
             print(f"warning: {nm} is never visible")
 
-    # lanes, bottom to top as the MP4 composites them: freeze stills, flashes, text, doodles
+    # ---- inserts and brand layers: streamed one at a time after the Pool (8 GB RAM); a full-screen video is its
+    # converted clip, which has no sound (the spine keeps her voice)
+    for ly in tl.get("layers", []):
+        nm, n = ly["id"], ly["f1"] - ly["f0"]
+        cat = "broll" if ly["mode"] == "full" else "insert" if ly["cat"] == "insert" else f"brand_{ly['z']}"
+        if ly["mode"] == "full" and ly["kind"] == "video":
+            ref, start = video_asset(ROOT / ly["media"], ly["n_media"], False, ly["label"]), ly.get("src_f0") or 0
+        else:
+            path = media / f"{nm}.mov"
+            if not (a.skip_layers and placed.get(nm) and path.exists()):
+                placed[nm] = (write_full if ly["mode"] == "full" else write_layer)(ly, path)
+            ref, start = video_asset(path, n, False, ly["label"]), 0
+        connected.append({"o0": ly["f0"], "n": n, "cat": cat, "kind": "overlay", "ref": ref, "start": start,
+                          "name": ly["label"][:60]})
+    layer_meta.write_text(json.dumps(placed), encoding="utf-8")
+
+    # lanes, bottom to top as the MP4 composites them (C1): freeze stills, B-roll, transitions, flashes, brand layers
+    # under the inserts, inserts, text, doodles, brand layers over everything
     lane = 1
-    for cat in ("freeze", "transition", "flash", "text", "doodle"):
+    for cat in ("freeze", "broll", "transition", "flash", "brand_under", "insert", "text", "doodle", "brand_over"):
         items = sorted([c for c in connected if c["cat"] == cat], key=lambda c: c["o0"])
         if not items:
             continue
@@ -643,9 +693,9 @@ def export(a, name):
         if c["kind"] == "timemap":
             body += (f'{pad}  <timeMap>\n{pad}    <timept time="0s" value="{ft(c["start"])}" interp="linear"/>\n'
                      f'{pad}    <timept time="{ft(c["n"])}" value="{ft(c["start"])}" interp="linear"/>\n{pad}  </timeMap>\n')
-        if with_transform and c.get("cat") in ("doodle", "text"):
+        if with_transform and c.get("cat") in ("doodle", "text", "insert"):       # they ride transitions
             body += transform_xml(cam, c["o0"], c["n"], local0, ind + 2, at=overlay_at)
-        elif with_transform and c.get("cat") not in ("flash", "transition"):
+        elif with_transform and c.get("cat") not in ("flash", "transition", "broll", "brand_under", "brand_over"):
             body += transform_xml(cam, c["o0"], c["n"], local0, ind + 2)
         if audio_db is not None:
             body += vol(audio_db, ind + 2)
@@ -679,9 +729,11 @@ def export(a, name):
     out = proj / f"{name}.fcpxml" if a.freeze == "baked" else proj / f"{name}_{a.freeze}.fcpxml"
     out.write_text(xml, encoding="utf-8")
     n_text = sum(1 for c in connected if c["cat"] == "text")
+    n_cat = lambda *cats: sum(1 for c in connected if c["cat"] in cats)
     print(f"[export] {time.time() - T:.1f}s -> {short(out)}: {len(spine)} spine clips, {n_text} text clips, "
           f"{sum(1 for c in connected if c['cat'] == 'doodle')} doodles, {sum(1 for c in connected if c['cat'] == 'freeze')} freezes, "
-          f"{sum(1 for c in connected if c['cat'] == 'flash')} flashes, {len(audio_items)} audio clips")
+          f"{sum(1 for c in connected if c['cat'] == 'flash')} flashes, {n_cat('insert')} inserts, {n_cat('broll')} "
+          f"full-screen, {n_cat('brand_under', 'brand_over')} brand layers, {len(audio_items)} audio clips")
 
 
 if __name__ == "__main__":

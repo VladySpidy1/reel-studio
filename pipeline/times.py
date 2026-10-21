@@ -1,12 +1,14 @@
 """Print what is HEARD in the reel, in OUTPUT time (after the script's edl, voice-overs and mutes), per take.
 
 python times.py ../projects/<name>/script.json
-Use these times for camera punches, sfx cues, freezes, literal titles and doodles.
+Use these times for camera punches, sfx cues, freezes, literal titles and doodles. The script's inserts print as
+resolved (inserts.resolve_times: when, size, sound), with their problems.
 """
 import json
 import sys
 from pathlib import Path
 
+import inserts
 import resolve
 import text_rules
 from common import ROOT, load_json
@@ -44,6 +46,17 @@ def main(path):
         print(f"terms: {' '.join(words[k]['w'].strip() for k in range(k0, k1 + 1))} -> {d} [{words[k0]['o']:.2f}]")
     for c in text_rules.cta_triggers(words, rules):          # each needs a "preset": "cta" block (cta_check)
         print(f"CTA spoken: «{c['word']}…» [{c['t']:.2f}]")
+    if sc.get("inserts"):              # read-only: inserts.json where the files are unchanged, else a probe
+        items, fails, warns = inserts.resolve_times(sc, words, edl.duration, sc["style"])
+        for it in items:
+            look = f"full-screen {it['kind']}" if it["mode"] == "full" else \
+                f"{it['style']}{' ' + it['size'] if it['size'] else ''} {it['w']}x{it['h']}"
+            heard = f" heard «{it['phrase']['heard']}»" if it["phrase"] else ""
+            print(f"insert {it['id']} {it['t0']:6.2f}-{it['t1']:6.2f}  {look}  {it['sfx'] or 'silent'}  | "
+                  f"{it['file']}{heard}")
+        for tag, found in (("FAIL", fails), ("WARN", warns)):
+            for t, m in found:
+                print(f"insert {tag} [{t:.2f}] {m}")
     mpath = ROOT / Path(sc["words"]).parent / "motion.json"
     if mpath.exists():                 # gestures inside the edit, in output time (transition points)
         print("gestures (output time):")

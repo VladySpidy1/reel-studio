@@ -5,8 +5,8 @@ subtitles in the brand look and nothing else (the 2026-10-13 rule). Claude picks
 shows baked graphics, and says so in the report. Start from `template.json`.
 
 ## Rules
-- One `src` segment; push 1.00 -> 1.00; no grade, music or SFX (`format.json` switches the brand's grade and music
-  off). The brand's subtitle look still applies.
+- One `src` segment; push 1.00 -> 1.00; no grade, music, SFX or brand layers (`format.json` switches the brand's
+  grade, music and `style.layers` off). The brand's subtitle look still applies.
 - Exclude baked-in logos and insets: `"style": {"layout": {"exclude+": [[x0, y0, x1, y1]]}}` for the whole video,
   or `place.exclude` per block. A plain `exclude` would drop the IG button rail.
 - Never caption a line that is already on screen (e.g. a chat bubble).

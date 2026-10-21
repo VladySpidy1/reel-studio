@@ -22,9 +22,10 @@ script.json "inserts": [{"file", "at": phrase as heard | output seconds, "occurr
   "src": [a, b] (full-screen video seconds), "creep": per second, "place": {...}, "sfx": palette event | null,
   "sfx_gain": dB, "why": "..."}]
 The look and timing defaults are style.insert (INSERT_STYLE), the size default grammar.insert.size_default, the
-sounds the sfx_palette events insert_card / insert_cutout / insert_full.
+sounds the sfx_palette events insert_card / insert_cutout / insert_full. lint_inserts is lint_edit's insert check.
 """
 import argparse
+import contextlib
 import hashlib
 import io
 import json
@@ -51,6 +52,7 @@ MIN_RATIO = 0.8          # phrase match: SequenceMatcher ratio of the normalised
 VERSION = 1              # of prepare's outputs: entries of another version are made again
 SRGB_ICC = "/System/Library/ColorSync/Profiles/sRGB Profile.icc"
 WHOOSH = re.compile(r"whoosh|swish|swoosh")
+NO_SOUND = re.compile(r"\bбез\s+звуку\b", re.I)      # the brief's «без звуку»: a silent insert is her choice
 INSERT_STYLE = {          # style.insert defaults (a script's or brand's style.insert overrides them key by key)
     "widths": {"s": 315, "m": 430, "l": 580}, "max_w": 700, "max_h": 900,
     "min_dur": 1.5, "hold": 0.5, "full_min_dur": 1.0, "full_creep": 0.015,
@@ -493,7 +495,8 @@ def resolve_times(script, words, duration, style, inventory=None):
     src, n_media, media, event, sfx, sfx_gain, why}.
     Only one insert shows at a time: a later one ends the previous one 1 f before it starts. Fails: a missing,
     refused or unusable file or key. Warns: a phrase not heard (the insert is left out) or heard only roughly,
-    an insert shorter than its minimum, a cut-short video, an animated picture, a silent insert (sfx null)."""
+    an insert shorter than its minimum, a cut-short video, an animated picture. A silent insert ("sfx": null) has
+    event None: lint_inserts decides whether that is allowed."""
     ist = insert_style(style)
     size_default = ((script.get("grammar") or {}).get("insert") or {}).get("size_default", "m")
     palette = {**SFX_EVENTS, **(script.get("sfx_palette") or {})}
@@ -634,7 +637,6 @@ def resolve_times(script, words, duration, style, inventory=None):
             "insert_cutout" if it["style"] == "cutout" else "insert_card"
         it.update(event=ev, sfx=None, sfx_gain=None)
         if ev is None:
-            warns.append((it["t0"], f"{it['id']} {it['file']}: silent (\"sfx\": null)"))
             continue
         if not palette.get(ev):
             fails.append((it["t0"], f"{it['id']} {it['file']}: sfx {ev!r} is not an sfx_palette event "
@@ -645,6 +647,94 @@ def resolve_times(script, words, duration, style, inventory=None):
         it.update(sfx=v["name"], sfx_gain=ins.get("sfx_gain", v.get("gain_db", 0)))
         cues.append({"name": v["name"], "peak_at": peak})
     return kept, fails, warns
+
+
+# ----------------------------------------------------------------------------- lint (lint_edit.HOOKS)
+
+def silent_allowed(script):
+    """Does the brief next to the script (inbox/<reel>/brief.md) say «без звуку»?"""
+    try:
+        return bool(NO_SOUND.search((script_dir(script) / "brief.md").read_text(encoding="utf-8")))
+    except OSError:
+        return False
+
+
+def titles(script, ctx):
+    """[(t0, t1, text)]: the blocks with a literal (unspoken) line other than the hook, while they are up."""
+    import build_timeline as bt
+    import text_rules
+    with contextlib.redirect_stdout(io.StringIO()):         # build_timeline's own alignment prints
+        screens, _ = bt.build_screens(script, bt.align_words(script), ctx["takes"])
+    out = []
+    for sc in screens:
+        for b in sc["blocks"]:
+            lit = [ln for ln in b["lines"] if ln.get("literal")]
+            if lit and "hook" not in text_rules.presets_of(b):
+                out.append((b.get("t0", min(tok["t"] for ln in b["lines"] for tok in ln["tokens"])),
+                            b.get("t1", min(sc["t1"], b.get("until", sc["t1"]))),
+                            " ".join(tok["text"] for ln in lit for tok in ln["tokens"])))
+    return out
+
+
+def lint_inserts(script, ctx):
+    """lint_edit's insert checks: (fails, warns) as lists of (t, msg). FAIL: resolve_times' fails (a missing, refused
+    or unusable file or key), an insert while the hook is up (ctx["hook"], from text_rules.lint_text), a designed
+    transition during a full-screen insert, a silent insert unless the brief says «без звуку». WARN: resolve_times'
+    warns, an insert while a literal title is up, a punch, shake or flash starting during a card, an insert sound
+    within 2 f of a hand-placed cue. The insert sounds join ctx["cues"] ("move": true); each insert start and each
+    full-screen end joins ctx["changes"] (visible changes for the dead-span check)."""
+    if not script.get("inserts"):
+        return [], []
+    import layers
+    from edl import VoiceMap
+    from lint_edit import DESIGNED
+    edl = ctx["edl"]
+    words = VoiceMap(edl, script.get("audio")).heard_words(load_json(ROOT / script["words"]))
+    items, fails, warns = resolve_times(script, words, edl.duration, script["style"])
+    spec = script.get("camera") or {}
+    moves = [(tr["at"] - tr.get("out", 6) / FPS, tr["at"] + tr.get("in", 6) / FPS, tr["type"])
+             for tr in spec.get("transitions", []) if tr["type"] in DESIGNED]
+    starts = [(m["t"], kind) for key, kind in (("punches", "punch"), ("shakes", "shake"), ("flashes", "flash"))
+              for m in spec.get(key, [])]
+    manual = [c["peak_at"] for c in (script.get("audio") or {}).get("sfx", []) if "peak_at" in c]
+    literal = any(isinstance(ln, dict) and ln.get("literal") for sc in script.get("screens", [])
+                  for b in sc.get("blocks") or [sc] for ln in b.get("lines", []))
+    hook, up = ctx.get("hook"), titles(script, ctx) if literal else []
+    silent_ok = silent_allowed(script)
+    for it in items:
+        a, b = it["t0"], it["t1"]
+        what = f"{it['id']} {it['file']} ({a:.2f}-{b:.2f} s)"
+        if hook and a < hook[1] and hook[0] < b:
+            fails.append((a, f"{what} while the hook is up ({hook[0]:.2f}-{hook[1]:.2f} s): no insert under the "
+                             f"hook; anchor it later"))
+        for t0, t1, text in up:
+            if a < t1 and t0 < b:
+                warns.append((a, f"{what} while the title «{text}» is up ({t0:.2f}-{t1:.2f} s)"))
+        if it["mode"] == "full":
+            for m0, m1, kind in moves:
+                if m0 < b and a < m1:
+                    fails.append((a, f"{what} is full-screen during the {kind} ({m0:.2f}-{m1:.2f} s), which it hides: "
+                                     f"move one"))
+        else:
+            for t, kind in starts:
+                if a <= t < b:
+                    warns.append((t, f"{kind} at {t:.2f} s during the card {what}: the card jumps with the picture; "
+                                     f"move one"))
+        if it["event"] is None:
+            if silent_ok:
+                warns.append((a, f"{what} is silent (\"sfx\": null; the brief says «без звуку»)"))
+            else:
+                fails.append((a, f"{what} is silent (\"sfx\": null): an insert sounds unless the brief says "
+                                 f"«без звуку»; drop \"sfx\" for its palette sound"))
+        elif it["sfx"]:
+            near = [p for p in manual if abs(p - it["f0"] / FPS) <= 2 / FPS + 1e-6]
+            if near:
+                warns.append((a, f"{what}: {it['sfx']} peaks within 2 f of the hand-placed cue at {near[0]:.2f} s; "
+                                 f"keep one"))
+    ctx["cues"] += layers.cues(items)
+    ctx["changes"] = ctx.get("changes", []) + [it["t0"] for it in items] + \
+        [it["t1"] for it in items if it["mode"] == "full"]
+    return fails, warns
 
 
 # ----------------------------------------------------------------------------- CLI

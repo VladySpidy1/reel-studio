@@ -1,5 +1,6 @@
-"""One review sheet per render: a frame for every subtitle screen at the moment it is fully typed,
-plus the layout report. Cheap to look at (one image, long edge <= 1200 px; --full: 360x640 tiles).
+"""One review sheet per render: a frame for every subtitle screen at the moment it is fully typed and for every
+insert once it has popped in, plus the layout report. Cheap to look at (one image, long edge <= 1200 px; --full:
+360x640 tiles).
 
 python review_frames.py output/<name>.mp4 [--out build/review/<name>_screens.jpg] [--cols N] [--full] [--force]
 python review_frames.py output/<name>.mp4 --cuts [--out build/review/<name>_cuts.jpg]
@@ -17,6 +18,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+import layers
 from common import BUILD, FPS, H, ROOT, SHEET_EDGE, W, load_json, require_slot, sheet_grid
 from edl import EDL
 
@@ -104,6 +106,10 @@ def main():
             shots.append(min(t_end - 0.04, t_last + 0.4))
             if b.get("preset"):                     # a hook or CTA card also as it pops
                 shots.append(min(t_end - 0.04, b.get("t0", sc["t0"]) + 0.3))
+    for ly in tl.get("layers", []):                 # each insert at rest, 0.2 s after its pop
+        if ly["cat"] == "insert":
+            anim = (layers.ANIMS.get(ly["anim"]) if isinstance(ly.get("anim"), str) else ly.get("anim")) or {}
+            shots.append(min(ly["f1"] / FPS - 0.04, ly["f0"] / FPS + anim.get("dur", 0) + 0.2))
     cols, tw, th = (a.cols or 6, 360, 640) if a.full else sheet_grid(len(shots), 360, a.cols)
     for i, t in enumerate(sorted(shots)):
         im = grab(a.video, t)
