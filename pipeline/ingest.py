@@ -1,11 +1,14 @@
 """Turn raw camera clips into the reel's intermediate media (run once per reel, before prep.py).
 
-python ingest.py <out_dir> <clip> [<clip> ...]
+python ingest.py <out_dir> <clip> [<clip> ...] [--speed k]
 
 Every clip becomes a 1080x1920 30 fps CFR ProRes 422 HQ file with 48 kHz PCM audio of exactly the same
 length as the picture, so all later steps (prep, render, editable-project export) read identical frames.
 Rotation from the phone's display matrix is applied, the picture is scaled to cover 1080x1920 and
 centre-cropped, variable frame rate is resampled to 30 fps. Holds the studio lock (one heavy job at a time).
+--speed k (1.0-1.3, default 1.0 = as recorded) plays the footage k times faster: the picture is retimed (30 fps
+output: a frame skip every 1/(k-1) frames from 30 fps footage, gentler from 60 fps), the sound goes through atempo
+(pitch kept). It is decided before prep; changing it later means ingest and prep again. Above 1.2 it warns.
 
 Writes to out_dir:
   media/<clip>.mov   intermediate media, one per clip
@@ -115,18 +118,26 @@ def count_frames(path, demux=()):
                               capture_output=True, text=True, check=True).stdout.strip().split(",")[0])
 
 
+SPEED = (1.0, 1.3)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("out")
     ap.add_argument("clips", nargs="+")
+    ap.add_argument("--speed", type=float, default=1.0, help="play the footage k times faster (1.0-1.3)")
     a = ap.parse_args()
+    if not SPEED[0] <= a.speed <= SPEED[1]:
+        raise SystemExit(f"--speed {a.speed:g}: allowed {SPEED[0]}-{SPEED[1]}")
+    if a.speed > 1.2:
+        print(f"WARNING speed {a.speed:g} above 1.2: hand and bottle moves stutter, whisper misses fast words")
     out = Path(a.out)
     media = out / "media"
     media.mkdir(parents=True, exist_ok=True)
     clips, offset, taken = [], 0.0, set()
     for c in a.clips:
         c = Path(c).resolve()
-        info = ingest(c, media, safe_name(c.stem, taken))
+        info = ingest(c, media, safe_name(c.stem, taken), speed=a.speed)
         info["offset"] = round(offset, 6)
         offset += info["duration"]
         clips.append(info)

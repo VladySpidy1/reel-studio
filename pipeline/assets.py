@@ -1,5 +1,5 @@
 """Music and SFX files by name: the library (assets/music, assets/sfx, with their credits JSON) and the creator's own
-files (assets/local/music, assets/local/sfx; never in git).
+files (assets/local/music, assets/local/sfx, never in git; or next to the reel's script, in its folder or inserts/).
 
 python assets.py music [query]    tracks: the exact file for audio.music.file, title, bpm, tags
 python assets.py sfx [query]      sounds: the name for audio.sfx, peak, what it is for
@@ -32,16 +32,18 @@ def _names(d, name):
     return [d / name] + [d / (stem + e) for e in EXTS]
 
 
-def find(kind, name):
+def find(kind, name, script_dir=None):
     """The file a script names ("music" or "sfx"), or None: an absolute or repo-relative path, else the name or its
-    stem with any audio extension in assets/<kind>/, then in assets/local/<kind>/. A library hit is
-    ROOT/assets/<kind>/<file>, the path the mix always used, so filter strings do not change."""
+    stem with any audio extension in assets/<kind>/, then in assets/local/<kind>/, then in the script's folder and its
+    inserts/ (where the creator drops her own file). A library hit is ROOT/assets/<kind>/<file>, the path the mix
+    always used, so filter strings do not change."""
     p = Path(name)
     if p.is_absolute():
         return p if p.is_file() else None
     if (ROOT / p).is_file():
         return ROOT / p
-    for d in (LIB / kind, LOCAL / kind):
+    here = [Path(script_dir), Path(script_dir) / "inserts"] if script_dir else []
+    for d in (LIB / kind, LOCAL / kind, *here):
         for c in _names(d, name):
             if c.is_file():
                 return c
@@ -59,22 +61,38 @@ def _credits(kind):
     return out
 
 
+def peak_seconds(x, sr, channels):
+    """Seconds to the loudest sample of interleaved samples x (any channel)."""
+    x = np.abs(np.asarray(x))
+    return float(np.argmax(x) // channels / sr) if len(x) else 0.0
+
+
 @lru_cache(maxsize=None)
 def measure_peak(path):
     """Seconds from the start of an audio file to its loudest sample (any channel), decoded by ffmpeg."""
     raw = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-i", str(path), "-f", "f32le", "-ac", "2", "-ar", "48000",
                           "-"], capture_output=True, check=True).stdout
-    x = np.abs(np.frombuffer(raw, np.float32))
-    return float(np.argmax(x) // 2 / 48000) if len(x) else 0.0
+    return peak_seconds(np.frombuffer(raw, np.float32), 48000, 2)
+
+
+def seconds(path):
+    """An audio file's length (ffprobe)."""
+    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(path)],
+                         capture_output=True, text=True, check=True).stdout
+    return float(out.strip())
+
+
+def credited_peak(path):
+    """credits_sfx.json's t_peak_s of a library sound (by stem), or None."""
+    c = _credits("sfx").get(Path(path).stem)
+    return c["t_peak_s"] if c and c.get("t_peak_s") else None
 
 
 def sfx_peak(path):
     """Where a sound peaks, in seconds from its start: credits_sfx.json's t_peak_s (by stem), else measured (cached
     in memory; nothing is written to the tracked credits, so git pull never conflicts)."""
-    c = _credits("sfx").get(Path(path).stem)
-    if c and c.get("t_peak_s"):
-        return c["t_peak_s"]
-    return measure_peak(str(path))
+    p = credited_peak(path)
+    return measure_peak(str(path)) if p is None else p
 
 
 def _title(c):

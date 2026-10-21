@@ -13,10 +13,13 @@ output/<name>_project/<name>.fcpxml plus media/ (self-contained: source clips, S
   - camera flashes: white ProRes 4444 clips with alpha
   - every subtitle block and doodle: its own ProRes 4444 clip with alpha, text-behind-subject baked in
   - SFX and music: separate audio clips with their levels; one shared gain brings the mix to the
-    same loudness as the draft MP4 (no limiter)
+    same loudness as the draft MP4 (no limiter). SFX and music that are not 48 kHz stereo WAV (her mp3/m4a) are
+    converted into media/<stem>.wav. The music is build/<name>_music.wav, the music as the MP4 mixed it: fades,
+    dropouts, the measured gain and the keyframed ducking baked in (not editable); the raw track sits muted on its
+    own lane ("music raw (muted)") for an editor who wants to redo it
 Transitions (swipe, spin, zoom-through) are baked clips with their motion blur above the takes; the text moves
-with keyframes. Not carried over (yet): zoom blur on cut-ins, motion blur on punch-ins, per-take white balance and the grade, music dropouts and fades
-(DaVinci drops FCPXML audio fades), the MP4's limiter.
+with keyframes. Not carried over (yet): zoom blur on cut-ins, motion blur on punch-ins, per-take white balance and the
+grade, the voice's 2-frame crossfades at speech cuts (add audio cross-fades in the editor), the MP4's limiter.
 
 --freeze picks how holds are written, to test what an editor imports: baked (a ProRes clip of the held
 frame, default), png (a still image), timemap (a retimed source clip).
@@ -548,21 +551,51 @@ def export(a, name):
         o0 = fr(v["at"])
         audio_items.append({"o0": o0, "n": min(nfr, n_out - o0), "ref": aid, "start_s": 0.0,
                             "name": f"voice over {k + 1}", "db": voice_db + v.get("gain_db", 0)})
-    for cue in build.sfx_cues(au.get("sfx", []) + tl.get("sfx", []))[0]:      # the MP4's cues; missing ones warn
-        aid, d = audio_asset(Path(cue["file"]), Path(cue["file"]).stem)
+    here = Path(a.script).resolve().parent
+
+    def wav48(path):
+        """path itself when it is a 48 kHz stereo WAV (the library: hard-linked), else media/<stem>.wav made by
+        ffmpeg: audio_asset declares 48 kHz stereo, and the decoder delay of an mp3/AAC then matches the MP4."""
+        info = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries",
+                               "stream=codec_name,sample_rate,channels", "-of", "csv=p=0", str(path)],
+                              capture_output=True, text=True).stdout.strip().split(",")
+        if path.suffix.lower() == ".wav" and info[0].startswith("pcm_") and info[1:3] == ["48000", "2"]:
+            return path
+        out = media / f"{path.stem}.wav"
+        if not out.exists() or out.stat().st_mtime < path.stat().st_mtime:
+            subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", str(path), "-vn", "-ar", "48000", "-ac", "2",
+                            "-c:a", "pcm_s24le", str(out)], check=True)
+        return out
+    for cue in build.sfx_cues(au.get("sfx", []) + tl.get("sfx", []), here)[0]:   # the MP4's cues; missing ones warn
+        f = wav48(Path(cue["file"]))
+        aid, d = audio_asset(f, f.stem)
         o0, head = max(0, fr(cue["t"])), max(0.0, -cue["t"])      # a cue before 0 starts inside the file
         n = min(int((d - head) * FPS), n_out - o0)
         if n <= 0:
             continue
         audio_items.append({"o0": o0, "n": n, "ref": aid, "start_s": head, "name": Path(cue["file"]).stem,
                             "db": cue.get("gain_db", -12) + norm})
-    m = build.find_music(au["music"])[0] if au.get("music") else None
-    if m:
-        mp = Path(m["file"])
+    m = build.find_music(au["music"], here)[0] if au.get("music") else None
+    stem = BUILD / f"{name}_music.wav"
+    if m and stem.exists():          # the music exactly as the MP4 mixed it (fades, gain, ducking), then the raw track
+        aid, _ = audio_asset(stem, f"{name} music")
+        audio_items.append({"o0": 0, "n": n_out, "ref": aid, "start_s": 0.0, "name": "music", "db": norm})
+        mp = wav48(Path(m["file"]))
         aid, d = audio_asset(mp, mp.stem)
         n = min(n_out, int((d - m.get("offset", 0)) * FPS))
+        audio_items.append({"o0": 0, "n": n, "ref": aid, "start_s": m.get("offset", 0), "name": "music raw (muted)",
+                            "db": -96.0})
+        print(f"music: {stem.name} (ducked and faded as in the MP4) + the raw track muted on its own lane")
+    elif m:
+        mp = wav48(Path(m["file"]))
+        aid, d = audio_asset(mp, mp.stem)
+        n = min(n_out, int((d - m.get("offset", 0)) * FPS))
+        gain, rep = m.get("gain_db", -20), OUT / f"{name}.report.json"
+        if m.get("under_lu") is not None and rep.exists():      # the gain the MP4's mix measured
+            measured = (load_json(rep).get("music") or {}).get("gain_db")
+            gain = gain if measured is None else measured
         audio_items.append({"o0": 0, "n": n, "ref": aid, "start_s": m.get("offset", 0), "name": "music",
-                            "db": m.get("gain_db", -20) + norm, "fade_in": m.get("fade_in", 0), "fade_out": m.get("fade_out", 0)})
+                            "db": gain + norm, "fade_in": m.get("fade_in", 0), "fade_out": m.get("fade_out", 0)})
     audio_items.sort(key=lambda x: x["o0"])
     for x, l in zip(audio_items, lanes_for([(x["o0"], x["n"]) for x in audio_items], -1)):
         x["lane"] = l

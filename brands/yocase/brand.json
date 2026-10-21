@@ -19,7 +19,8 @@
   },
   "cta_phrases+": ["^обирайте$"],
   "grade": {"lift": 0.01, "contrast": 1.04, "saturation": 1.04, "vignette": 0.04},
-  "audio": {"music": {"file": "music_03_gimme_that_groove_112bpm_full.wav", "gain_db": -18, "offset": 18.423}},
+  "audio": {"music": {"file": "music_03_gimme_that_groove_112bpm_full.wav", "gain_db": -18, "under_lu": 15,
+                       "offset": 18.423, "duck": {"rise_db": 4, "lead": 0.15, "release": 0.4, "min_gap": 0.8}}},
   "sfx_banned": ["record_scratch_*", "cartoon_*", "boing_*", "tada_brass", "cha_ching_*"],
   "lint": {"slow_push": false}
 }

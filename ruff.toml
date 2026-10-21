@@ -1,0 +1,7 @@
+# CI lint (.github/workflows/ci.yml): only what breaks at run time - syntax errors and undefined names - so the
+# pipeline's own style stays the reviewer's call.
+target-version = "py312"
+line-length = 120
+
+[lint]
+select = ["E9", "F63", "F7", "F82"]

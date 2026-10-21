@@ -1,0 +1,16 @@
+# Cheap checks on every push and pull request: ruff (syntax errors and undefined names, ruff.toml) and the unit tests
+# (tests/: pure Python with numpy only; no ffmpeg, whisper, torch or Chrome).
+name: ci
+on: [push, pull_request]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: ruff
+        run: pip install ruff==0.17.1 && ruff check pipeline tests
+      - name: unit tests
+        run: pip install numpy==1.26.4 && python -m unittest discover tests

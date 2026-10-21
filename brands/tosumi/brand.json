@@ -4,7 +4,8 @@
   "colors": {"accent": "#FF3D96"},
   "terms": {"tosumi": {"heard_as": ["тосумі", "тосуми"]}},
   "grade": {"lift": 0.01, "contrast": 1.04, "saturation": 1.04, "vignette": 0.10},
-  "audio": {"music": {"file": "music_01_gummies_120bpm_full.wav", "gain_db": -17, "offset": 16.34}},
+  "audio": {"music": {"file": "music_01_gummies_120bpm_full.wav", "gain_db": -17, "under_lu": 15, "offset": 16.34,
+                       "duck": {"rise_db": 4, "lead": 0.15, "release": 0.4, "min_gap": 0.8}}},
   "sfx_palette": {
     "accent_pop": [{"name": "pop_04_light", "gain_db": -23}],
     "salon": [{"name": "ding_02_soft_chime", "gain_db": -20}],
