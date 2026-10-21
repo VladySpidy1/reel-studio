@@ -38,8 +38,9 @@ Aim for 3-6 changes per 30 s.
   from this format.
 - «без музики» writes `"audio": {"music": null}` in the script; the no-music export always exists (ADR-0003).
 - Speech cuts follow words, not beats, so lint skips the beat check here (`lint.beat_cuts`).
-- Keyframed ducking comes with the audio work; until then the bed is static. The third-party "mandatory music" is
-  rejected.
+- Keyframed ducking, never a sidechain: the bed sits `under_lu` (15) LU under the voice and rises `duck.rise_db`
+  (4 dB) in gaps of at least `duck.min_gap` (0.8 s); the brand sets these in `brand.json` `audio.music`. The
+  third-party "mandatory music" is rejected.
 
 ## Inserts
 Only when the image directly confirms the phrase; never over her face or the subtitles; inside x 128-952,

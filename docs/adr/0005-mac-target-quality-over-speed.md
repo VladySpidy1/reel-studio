@@ -27,3 +27,6 @@ rendering overnight is fine.
 
 - 2026-10-20: the developer's Mac is an M2 Pro with 16 GB, not an M3 Pro (factual correction; the decision is
   unchanged).
+- 2026-10-21: the renderer is Playwright's pinned Chromium (`setup_mac.sh` installs it); Google Chrome is no longer
+  needed, so a self-updating Chrome cannot shift the text rendering. VideoToolbox is not used: encoding is libx264
+  and prores_ks.

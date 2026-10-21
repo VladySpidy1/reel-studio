@@ -17,6 +17,8 @@ ffmpeg -hide_banner -encoders 2>/dev/null | grep -q prores_ks || { echo "ffmpeg 
 
 uv venv .venv --python 3.12 --allow-existing
 VIRTUAL_ENV=.venv uv pip install -r pipeline/requirements.lock.txt
+# stamp of the lock this .venv was built from; doctor.py compares it with the current lock after every pull
+shasum -a 256 pipeline/requirements.lock.txt | cut -d' ' -f1 > .venv/reel-studio.lock.sha256
 # the renderer: Playwright's own Chromium, pinned by the locked playwright version, so subtitles render the same
 # until the lock changes (a self-updating Chrome would shift the text rendering)
 .venv/bin/python -m playwright install chromium

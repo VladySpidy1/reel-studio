@@ -35,3 +35,8 @@ learned/*
 !learned/README.md
 assets/local/
 /CLAUDE.local.md
+
+# Pictures for inserts can show private chats or unreleased products: never track them (the repo is public)
+projects/*/inserts/
+*.heic
+*.HEIC

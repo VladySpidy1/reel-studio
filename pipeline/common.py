@@ -122,7 +122,7 @@ def require_slot(script=None, need_pass=False, force=False, render=None):
                    f"{meta.get('renders', [])}); rebuild first")
     fails = meta.get("checks", {}).get("fail", [])
     if need_pass and fails:
-        refuse("checks FAIL:\n" + "\n".join(f"  {f}" for f in fails) + "\nfix the script, or --allow-check-fail")
+        refuse("checks FAIL:\n" + "\n".join(f"  {f}" for f in fails) + "\nfix the script (a deliberate exception: build.py --allow-check-fail)")
     return meta
 
 
