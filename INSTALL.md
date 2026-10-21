@@ -8,7 +8,8 @@ it says "dev Mac". Allow about half a day, most of it the smoke reel.
 1. `main` is pushed and its commit passed `.venv/bin/python pipeline/selftest.py`.
 2. A fresh clone works: `git clone https://github.com/VladySpidy1/reel-studio.git /private/tmp/rs-clone`, then
    `.venv/bin/python -m py_compile /private/tmp/rs-clone/pipeline/*.py` (the 3.12 interpreter, not
-   `/usr/bin/python3`). Delete the clone afterwards.
+   `/usr/bin/python3`) and `.venv/bin/python /private/tmp/rs-clone/pipeline/selftest.py`. Delete the clone
+   afterwards.
 3. Pack on a USB stick or for AirDrop:
    - `brands/*/local/` for every brand (licensed fonts, layers, permanent brand photos: never in git);
    - `исходники/IMG_2373.MOV` (40 MB) for the smoke reel;
@@ -50,11 +51,12 @@ it says "dev Mac". Allow about half a day, most of it the smoke reel.
     `setup_mac.sh` does not write `.venv/reel-studio.lock.sha256` yet; ffmpeg at `/opt/homebrew/bin/ffmpeg`; the
     role line "creator machine, creator settings in place"; and no permission prompt.
 11. **Smoke reel:** with Marina at the keyboard, «новий рілс для YOCASE: тест». Drag `исходники/IMG_2373.MOV` into
-    the reel folder that opens, write «файли там», and go through the whole flow: draft, one correction, «фінал»,
-    «готово» (the cleanup click), then «правка до рілса …» (reopen re-ingests the media) and «готово» again.
-    Time each step and watch Memory Pressure in Activity Monitor. Note the M1 timings, and whether 2 render
-    processes (the 8 GB default) or 4 are better, for the `reel` skill's estimates. The only permission prompt
-    allowed in the whole flow is the cleanup.
+    the reel folder that opens, write «файли там», and go through the whole flow: draft, one correction, «фінал»
+    (the final and the no-music version), «готово» (the cleanup click), then «правка до рілса …» (reopen re-ingests
+    the media) and «готово» again. Time each step and watch Memory Pressure in Activity Monitor. Note the M1
+    timings, and whether 2 render processes (the 8 GB default) or 4 are better; put the prep estimate into
+    `.claude/skills/reel/SKILL.md` step 2.3 (now «3 x the raw minutes», measured on the M2 Pro). The only permission
+    prompt allowed in the whole flow is the cleanup.
 12. **Comfort:** add `~/reel-studio/inbox` and `~/reel-studio/output` to the Finder sidebar. System Settings,
     Energy (Battery on a laptop): prevent automatic sleeping on power adapter when the display is off. Long steps
     need Claude open, the Mac on power and the lid open.

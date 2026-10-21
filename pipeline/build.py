@@ -14,8 +14,10 @@ Music and SFX are found by name (assets.py, also in the script's folder); a miss
 and the reel is made without it. The voice gets 2-frame crossfades at speech cuts with audio.xfade_frames 2; music
 with under_lu is measured to sit that many LU under the voice, and music with duck rises in the gaps between speech
 spans. build/<name>_music.wav is the music alone as mixed (the editable project's music), rewritten by every audio
-render. Next to output/<name>.mp4, output/<name>.report.json holds the final report's numbers: lengths, removed time
-(pauses, retakes, dead air), cuts, music, missing files, warnings (other features add their sections).
+render. Next to output/<name>.mp4, output/<name>.report.json holds everything the creator's report says (the reel
+skill's report.uk.md reads only this file): lengths, removed time (pauses, retakes, dead air), cuts, music, missing
+files, warnings, the brand and format, what the text layer did (hook, CTA, censorship, Latin words), the inserts
+shown, left out and refused, and the slot's checks.
 """
 import argparse
 import os
@@ -27,11 +29,12 @@ from pathlib import Path
 import assets
 import audio
 import build_timeline
+import inserts
 import overlay_render
 import resolve
 import trim
 import video_pass
-from common import (BUILD, OUT, ROOT, default_procs, keep_awake, load_json, reel_id, require_slot, run_log,
+from common import (BUILD, FPS, OUT, ROOT, default_procs, keep_awake, load_json, reel_id, require_slot, run_log,
                     save_json, short, source_path, studio_lock)
 from edl import EDL, VoiceMap, speech_spans
 
@@ -78,7 +81,9 @@ def report(script, music, mixed, missing, warnings, short_by):
     """output/<name>.report.json: the numbers of the final report (trim.stats; audio-timing owns the schema, other
     features add their sections). Lengths are in seconds: raw_s is the footage as shot, src_s after a speed-up,
     out_s the reel; edits counts the cuts of the edl; removed splits the cut time into pauses, retakes and dead air.
-    music: what was mixed (gain_db null with --skip-audio); it starts at frame 0, from `offset` into the track."""
+    music: what was mixed (gain_db null with --skip-audio); it starts at frame 0, from `offset` into the track.
+    brand: the ids, their display names and the resolver's layers and warnings; text: build/meta.json
+    checks.applied (censored, latin, hook, cta, terms); inserts: insert_report; checks: the slot's fail and warn."""
     st = trim.stats(script)
     m = None
     if music:
@@ -87,8 +92,33 @@ def report(script, music, mixed, missing, warnings, short_by):
              "gain_db": mixed["gain_db"] if mixed else None, "under_lu": music.get("under_lu"),
              "ducked_gaps": mixed["ducked_gaps"] if mixed else None, "short_by_s": short_by, "starts_at": 0.0,
              "offset": music.get("offset", 0), "fade_in": music.get("fade_in", 0)}
+    meta, tl = load_json(BUILD / "meta.json"), load_json(BUILD / "timeline.json")
+    r = script["_resolve"]
     return {**{k: st[k] for k in ("raw_s", "speed", "src_s", "out_s", "edits")}, "removed": st["removed"], "music": m,
-            "missing": missing, "warnings": warnings}
+            "missing": missing, "warnings": warnings,
+            "brand": {"brand": script.get("brand"), "format": script.get("format"), "names": r["names"],
+                      "layers": r["layers"], "warnings": r["warnings"]},
+            "text": meta["checks"]["applied"], "inserts": insert_report(script, tl),
+            "checks": {k: meta["checks"][k] for k in ("fail", "warn")}}
+
+
+def insert_report(script, tl):
+    """The report's inserts: each one shown (its timeline layer, joined by id i<k> to script inserts[k]), the script's
+    inserts that were left out (not heard, cut short), and the files the inventory refused."""
+    ins, shown = script.get("inserts", []), []
+    size0 = ((script.get("grammar") or {}).get("insert") or {}).get("size_default", "m")     # as inserts.resolve_times
+    for lay in (x for x in tl.get("layers", []) if x["cat"] == "insert"):
+        i = ins[int(lay["id"][1:])]
+        size = i.get("size", size0) if lay["mode"] == "overlay" and "w" not in i else None
+        shown.append({"id": lay["id"], "file": i.get("file"), "at": i.get("at"), "t0": round(lay["f0"] / FPS, 2),
+                      "t1": round(lay["f1"] / FPS, 2), "mode": lay["mode"], "size": size, "w": lay["w"],
+                      "crop": i.get("crop"), "sfx": lay["sfx"], "why": i.get("why")})
+    ids = {s["id"] for s in shown}
+    left = [{"id": f"i{k}", "file": i.get("file"), "at": i.get("at")} for k, i in enumerate(ins) if f"i{k}" not in ids]
+    inv = inserts.load_inventory(script)["files"].values() if ins or (inserts.script_dir(script) / "inserts").is_dir() \
+        else []
+    return {"shown": shown, "left_out": left,
+            "refused": [{"file": e["name"], "why": e["refused"]} for e in inv if e.get("refused")]}
 
 
 def clip_edges(script):

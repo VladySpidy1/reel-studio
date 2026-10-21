@@ -31,11 +31,17 @@ handles mechanics (ADR-0001).
   Lives in `formats/<format>/`.
 - **Universal grammar** — editing rules that apply to any talking reel regardless of format: hook, silence
   cleanup, subtitles, accent words, punch-ins, SFX.
-- **Brief** — what the creator gives per reel: brand, format, idea, goal, optional reference.
+- **Brief** — what the creator gives per reel: brand, format, idea, hook, code word, music, censorship, inserts,
+  optional reference. A Ukrainian `brief.md` next to the reel's script (template `docs/creator/brief_template.uk.md`);
+  `lint_edit.py` checks the script against it (`brief.py`).
 - **Take (дубль)** — one attempt at a line. A failed take ends with the creator saying **«стоп»** (shooting
-  protocol, ADR-0006); a cutter on that marker is planned (roadmap 4), not built.
-- **Timeline** — the single source of truth for one reel (`projects/<name>/script.json` today). Every export
-  is generated from it (ADR-0003).
+  protocol, ADR-0006); `trim.py` drops attempts that end in «стоп», proposes dropping repeated ones (the last
+  complete take stays) and cuts the dead air.
+- **Timeline** — the single source of truth for one reel: its script, `inbox/<reel>/script.json` for a creator reel
+  (`done/<reel>/` once archived), `projects/<name>/script.json` for the developer's examples. Every export is
+  generated from it (ADR-0003).
+- **Reel id** — the ASCII name of a creator reel, `<brand>_<yymmdd>_<title in Latin>` (`inbox.py new`), shared by
+  its folders in `inbox/` or `done/`, `build/` and its outputs.
 - **Screen / block** — subtitle units: one screen per take, blocks of 2–4-word lines inside it.
 - **Accent word** — the one punch word per half-sentence, rendered in the brand's accent style.
 - **Graphic template** — a parametric, code-drawn motion-graphics element of a brand (product callout, list
@@ -45,15 +51,28 @@ handles mechanics (ADR-0001).
 - **Intermediate media** — colour-normalised video (white balance matched across takes, brand grade), 1080×1920
   ProRes, shared by every export so the MP4 and the editable project look identical. HDR clips are refused at
   ingest (`ingest.py`); there is no HDR→SDR tone-map yet.
-- **Draft MP4** — the rendered reel, ready to post.
+- **Draft** — a fast preview render for review (`build.py --draft`: x264 veryfast, `output/<reel>_draft.mp4`).
+- **Final** — the reel ready to post (`build.py` without `--draft`: `output/<reel>.mp4`), rendered with its
+  no-music variant once the draft is approved.
+- **Report** — what the creator reads after each render: the Ukrainian template of the `reel` skill
+  (`.claude/skills/reel/report.uk.md`) filled from `output/<name>.report.json` (lengths, removed time, music,
+  text, inserts, checks).
+- **Build slot** — `build/meta.json`, `timeline.json`, `camera.json` and `overlay/`: one reel's laid-out state at a
+  time. Renders, review and export of a reel run against the slot its last build filled, and refuse another reel's.
+- **Studio lock** — one heavy job at a time (prep, build, export) across sessions; a second one exits 2
+  ("studio busy").
+- **Insert** — a picture or clip the creator supplies, shown as a card over the picture or full-screen, on the
+  phrase she names (ADR-0009).
 - **Editable project** — FCPXML timeline plus per-element media (subtitle blocks and graphics as alpha
   ProRes 4444 clips, SFX, music, zoom keyframes) for finishing in DaVinci Resolve (ADR-0004).
 - **No-music variant** — export with SFX but no music bed, so a trending Instagram sound can be added in the
   app at posting time (in-app sounds cannot be baked in).
 - **Hook variants** — 2–3 alternative openings rendered from the same timeline, for Instagram trial reels.
 - **Session types** — Research & pre-production, Batch edit, Results review (ADR-0007).
-- **Learned rules** — corrections the creator makes, appended to the brand or format file so the next reel
-  does not repeat the mistake.
+- **Learned rules** — corrections the creator makes, appended on her Mac to the gitignored `learned/`
+  (`general.md`, `brands/<brand>.md`, `formats/<format>.md`) so the next reel does not repeat the mistake; the
+  `reel` skill reads them before writing a script, and the developer promotes them by hand into `brands/` or
+  `formats/`.
 - **Research account** — a separate Instagram account (not the creator's working account, not a brand's)
   used for browsing competitors.
 - **«реф» collection** — the creator's saved-reels collection of references she likes; an input to research.
@@ -70,8 +89,9 @@ handles mechanics (ADR-0001).
 | [0006](docs/adr/0006-shooting-protocol-stop-marker-hdr-off.md) | Shooting protocol: «стоп» after a failed take; iPhone HDR video off |
 | [0007](docs/adr/0007-three-session-types-and-competitor-research.md) | Three session types; competitor research; weekly stats loop |
 | [0008](docs/adr/0008-code-drawn-graphics-template-library.md) | Code-drawn graphics: per-brand template library plus bespoke graphics |
+| [0009](docs/adr/0009-raster-inserts-outside-the-matte.md) | Raster inserts and brand image layers are Python layers outside the person matte |
 
-## Current state (2026-10-20)
+## Current state (2026-10-21)
 
 - Pipeline in `pipeline/`, ported to macOS / Apple Silicon (roadmap step 1 done; `setup_mac.sh`, locked deps in
   `requirements.lock.txt`, run everything with `.venv/bin/python`):
@@ -102,12 +122,28 @@ handles mechanics (ADR-0001).
   `formats/<format>/` (`format.json` + `FORMAT.md` + `template.json`). `pipeline/resolve.py` resolves every script
   studio → brand → format → script for all entry points; a script without a brand keeps the studio look, which
   is TOSUMI's (`pipeline/style_default.json`). Brands: TOSUMI, YOCASE. Formats: talking-head, subtitles-only,
-  skit-hoche-a, product-lineup. `docs/STYLE.md` is the universal subtitle system. The skill
-  `.claude/skills/reel-subtitles/` is still the TOSUMI-first v0 and will be generalised.
-- Reels: `projects/tosumi_hair/` (finished, Windows) and `projects/yocase_line/` — second brand (YOCASE, 4
-  shampoos), raw iPhone clips; v4 cut with the videographer skill (`make_script.py` generates its script). Its
-  hook (phone mock-up with the creator cut out, from a reference reel) is the next graphic to build. Renders,
-  footage and build files are not in git.
+  skit-hoche-a, product-lineup. `docs/STYLE.md` is the universal subtitle system.
+- Content studio (2026-10-21, design in `docs/superpowers/specs/2026-10-20-content-studio/`; roadmap 7 done, the
+  «стоп» cutter of roadmap 4 is part of trim; HDR tone-mapping still is not built):
+  - Creator flow: the `/reel` skill (`.claude/skills/reel/`: brief -> prep -> template -> trim -> times -> screens,
+    inserts, CTA -> lint -> draft -> self-review -> Ukrainian report -> final + no-music -> archive), her brief
+    checked by lint, `learned/` for her corrections. `reel-subtitles` is now a reference the model never loads on
+    its own. Tools: `doctor.py`, `inbox.py`, `cleanup.py`, `brief.py`, `selftest.py`; one heavy job at a time
+    (studio lock); compact terminal output with full logs in `build/<reel>/logs/`; review images at most 1200 px.
+  - Text: asterisk censorship, Latin brand words aligned to the transcript (`terms`), hook and CTA presets (the CTA
+    card pops with a chime on the spoken phrase), blocks drawn in front of her, pre-render checks (glyphs, safe
+    area, overlaps, face, contrast) that FAIL before the render.
+  - Audio and timing: `trim.py` (dead air, retakes, «стоп»), keyframed music ducking under the voice, music by
+    name (`assets.py`), optional speed-up at ingest, missing sounds skipped and reported.
+  - Inserts: pictures and clips as cards or full-screen on a heard phrase, with their sound; brand layers.
+  - Every render writes `output/<name>.report.json`, which the Ukrainian report reads.
+- Not verified yet: the install on the creator's M1 8 GB Mac (INSTALL.md), and how many tokens a creator-flow reel
+  costs against the 2026-10-13 baseline (~6M cache-read tokens per subtitles-only reel).
+- Reels: `projects/tosumi_hair/` (finished, Windows; its inputs are gone, it no longer renders) and
+  `projects/yocase_line/` — second brand (YOCASE, 4 shampoos), raw iPhone clips; v4 cut with the videographer skill
+  (`make_script.py` generates its script; its close-up callouts were moved inside the IG crop-safe area on
+  2026-10-21). Its hook (phone mock-up with the creator cut out, from a reference reel) is the next graphic to
+  build. Renders, footage and build files are not in git.
 - 2026-10-13: three already-edited YOCASE videos got subtitles only (`projects/yocase_2371`, `yocase_2373`,
   `yocase_2477`): comfortable YOCASE spacing, baked graphics excluded, and the IG crop-safe area (x 128-952,
   y 250-1480) after text was cut off on a real phone.

@@ -90,7 +90,9 @@ def label(text, color, t_):
     return {"text": f"*{text}*", "literal": True, "t": t_, "color": color, "scale": 1.3, "anim": "pop"}
 
 
-closeup_place = {"x": 60, "y": 280, "safe": [56, 250, 560, 640]}
+# every placement stays inside the IG crop-safe area (x 128-952, y 250-1480; rail x > 850 and y > 1050): the close-up
+# callouts sit left of the pump, the Balance ones on the wall right of her
+closeup_place = {"x": 128, "y": 280, "safe": [128, 250, 560, 640]}
 screens = [
     {"take": tk["intro_a"], "blocks": [{"lines": ["наші лінійки"]}]},
     {"take": tk["intro_b"], "blocks": [{"lines": ["кому і яка _підійде_"]},
@@ -102,17 +104,17 @@ screens = [
     {"take": tk["repair"], "blocks": [{"lines": [label("repair plex", R, at("repair", 76.80)), "для _сухого_ волосся"]}]},
     {"take": tk["repair_cu"], "blocks": [{"lines": ["відновлення", "структури", {"text": "зменшення", "color": R},
                                                     {"text": "*ламкості*", "color": R}],
-                                          "behind": False, "place": {"x": 730, "y": 110, "safe": [700, 60, 1040, 620]}}]},
+                                          "behind": False, "place": closeup_place}]},
     {"take": tk["bal_raise"], "t1_override": end("bal_c"), "blocks": [        # right of the bottle, on the wall
         {"lines": [label("balance", B, w_vo(0, 112.61)), "для _жирного_", "волосся"], "behind": False,
-         "place": {"x": 700, "y": 280, "safe": [690, 240, 1040, 560]}},
+         "place": {"x": 620, "y": 280, "safe": [590, 250, 940, 560]}},
         {"lines": [{"text": "зміцнення та", "color": B}, {"text": "*блиск*", "color": B}], "behind": False,
-         "place": {"x": 700, "y": 600, "safe": [690, 560, 1040, 820]}}]},
+         "place": {"x": 650, "y": 600, "safe": [590, 560, 940, 820]}}]},
     {"take": tk["fix_cu"], "blocks": [                                         # beside the pump, two short blocks
         {"lines": [label("fix color", C, w_vo(2, 146.09)), "для _фарбованого_", "волосся"], "behind": False,
-         "until": w_vo(2, 147.93), "place": {"x": 60, "y": 240, "safe": [56, 230, 420, 560]}},
+         "until": w_vo(2, 147.93), "place": closeup_place},
         {"lines": ["без вимивання", {"text": "*кольору*", "color": C}], "behind": False,
-         "place": {"x": 60, "y": 240, "safe": [56, 230, 420, 560]}}]},
+         "place": closeup_place}]},
     {"take": tk["outro"], "blocks": [{"lines": ["не знаєш яку", "лінійку _вибрати_"]},
                                      {"lines": ["пиши нам", "в *дірект*"]},
                                      {"lines": ["ми із задоволенням", "тобі допоможемо"]}]},

@@ -8,7 +8,8 @@ times. Exit code 1 when anything FAILs. It only reads the script, the EDL and th
 taste (which shot, which word) - that stays with the editor. The thresholds and bans are the resolved script's lint
 profile (pipeline/studio_default.json "lint", changed by the brand and the format); a brand's sfx_banned always
 applies. The text, insert and audio checks of their own modules run through HOOKS, and the sound checks cover their
-automatic cues too.
+automatic cues too. A creator reel's script (inbox/<reel>/script.json) is also checked against the brief.md next to
+it (brief.check: hook, code word, censorship, music, inserts, speed, brand).
 """
 import importlib
 import re
@@ -210,8 +211,17 @@ def lint(script):
 
 
 def main():
+    if len(sys.argv) != 2 or sys.argv[1] in ("-h", "--help"):
+        print(__doc__)
+        return 0 if sys.argv[1:] in (["-h"], ["--help"]) else 2
     path = Path(sys.argv[1])
-    fails, warns = lint(resolve.load_script(path))
+    script = resolve.load_script(path)
+    fails, warns = lint(script)
+    if path.with_name("brief.md").is_file():          # a creator reel: the script must do what her brief asks
+        import brief
+        more_fails, more_warns = brief.check(brief.parse(path.with_name("brief.md")), script)
+        fails += more_fails
+        warns += more_warns
     for tag, items in (("FAIL", fails), ("WARN", warns)):
         for t, m in sorted(items):
             print(f"{tag} {t:6.2f}s  {m}")

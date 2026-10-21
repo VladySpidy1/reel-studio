@@ -8,11 +8,14 @@ description: Edit like a pro short-form videographer - pick the takes by watchin
 The craft is researched and written down: `playbook.md` next to this file (effects with timings in frames,
 format grammar, universal grammar, sources). Do NOT re-research. Read the playbook sections you need for the
 reel at hand: section 1 (principles) once, section 2 for each effect you place, section 3 or
-`formats/<format>/FORMAT.md` for the format, section 4 for any talking reel. `reel-subtitles` covers the pipeline
-commands and the text; this skill decides the picture and the sound around it.
+`formats/<format>/FORMAT.md` for the format, section 4 for any talking reel. The `reel` skill drives a creator
+reel and `reel-subtitles` is the reference for the pipeline commands and the text; this skill decides the picture
+and the sound around it. "The reel's script" is `inbox/<reel>/script.json` (creator) or `projects/<name>/script.json`
+(developer).
 
-Worked example: `projects/yocase_line/make_script.py` (4-product lineup) - generate scripts from a small Python
-file like this one, never by hand-editing hundreds of JSON numbers.
+Worked example: `projects/yocase_line/make_script.py` (4-product lineup). Generators like it are for the developer's
+reels in `projects/` only, where hundreds of JSON numbers come from a small Python file; a creator reel's script is
+JSON written in place (never Python under `inbox/`).
 
 ## 1. Watch the footage before choosing a single take
 
@@ -71,17 +74,19 @@ No whoosh on plain or jump cuts.
 
 ## 4. Lint, render, LOOK
 ```
-.venv/bin/python pipeline/lint_edit.py projects/<name>/script.json
-X264_PRESET=veryfast .venv/bin/python pipeline/build.py projects/<name>/script.json --name <name>_draft
-.venv/bin/python pipeline/contact_sheet.py output/<name>_draft.mp4 0 <dur> 0.3
+.venv/bin/python pipeline/lint_edit.py <the reel's script>
+.venv/bin/python pipeline/build.py <the reel's script> --draft
+.venv/bin/python pipeline/contact_sheet.py output/<name>_draft.mp4 0 <dur> 0.3 --phone
 ```
+(In a creator reel the `reel` skill runs the build in the background with a log.)
 lint_edit must show 0 FAIL; fix each WARN or know why it stays. Then go through the WHOLE draft sheet (0.25-0.3 s
 tiles) shot by shot before anyone sees it: Does every shot show a line or an action? Is the label the product
 being named? Any junk frame (hand dropping, walking in, empty wall, defocused mush longer than 3 f)? Text over a
-label, face or bottle? Captions inside x 128-952, y 250-1480 (phone crop)? A cut that jumps for no reason? Fix and re-render; the
-creator should never be the one who finds these.
+label, face or bottle? Captions inside the phone crop lines (x 128-952, y 250-1480)? A cut that jumps for no reason?
+Fix and re-render; the creator should never be the one who finds these.
 
-## 5. Learned rules (creator corrections; add new ones here, with the date)
+## 5. Learned rules (developer-promoted, with the date)
+Creator corrections go to `learned/` first (the `reel` skill appends them); only the developer promotes them here.
 - 2026-10-10, YOCASE: "видео мертвое" - every visible gesture is an edit point: the sideways hand sweep becomes a
   swipe ("камера поворачивается"), the bottle pushed to the lens becomes a zoom into the close-up. Moves under
   10 % and in-out blips read as nothing.

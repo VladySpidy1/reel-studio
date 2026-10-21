@@ -25,14 +25,19 @@ Two people use this repository, each on their own Mac:
   slot), `output/` (MP4s, `<name>.report.json`), `learned/` (her corrections; only `learned/README.md` is tracked),
   `brands/<b>/local/` and `assets/local/` (licensed or her own files, copied in person), `исходники/`.
 - Creator tools: `pipeline/doctor.py` (health and preflight), `pipeline/inbox.py` (reel folders: new, prep,
-  archive, reopen), `pipeline/cleanup.py` (frees disk after a reel), `pipeline/brief.py` (reads `brief.md`).
+  archive, reopen), `pipeline/cleanup.py` (frees disk after a reel), `pipeline/brief.py` (reads `brief.md`;
+  `lint_edit.py` checks a reel's script against the brief next to it).
+- Skills: `reel` (the creator flow from brief to final, with `brief.md` and the Ukrainian `report.uk.md`; the
+  report reads `output/<name>.report.json`), `reel-videographer` (the picture), `reel-subtitles` (a reference for
+  commands, markup and fixes; only `/reel-subtitles` loads it, the model never does).
 - One heavy job at a time: renders, prep and export hold the studio lock; "studio busy" (exit 2) means wait and
   retry. Checks render with `build.py --draft`.
 
 ## Creator mode
 
 Talk to Marina in Ukrainian and in plain words: no paths, commands, script names or jargon. Never ask her to run a
-command or to open Terminal. The `reel` skill drives each reel; `docs/creator/brief_template.uk.md` is her brief.
+command or to open Terminal. The `reel` skill drives each reel («змонтуй», «зроби рілс», «новий рілс», /reel);
+`docs/creator/brief_template.uk.md` is her brief.
 
 **Health**
 - Run `.venv/bin/python pipeline/doctor.py` at the start of every reel, and `doctor.py --full` after an update.
@@ -42,6 +47,8 @@ command or to open Terminal. The `reel` skill drives each reel; `docs/creator/br
 - If `.venv/bin/python` itself is missing, run `git rev-parse --git-dir --git-common-dir`. Two different paths
   mean the session runs in a worktree: «Відкрий нову сесію в папці reel-studio». Otherwise setup is missing: Vlad.
 - A brand without a folder in `brands/` stops the reel: «Цей бренд ще не налаштований — це робить Влад».
+- Outside a reel: «перевір студію» -> `doctor.py --full`; «звіт для Влада» -> `doctor.py --report`, then
+  `open -R output/developer_report.txt`.
 
 **What you may change**
 - Write only into `inbox/`, `build/`, `output/` and `learned/`, by hand or through the pipeline scripts. Never edit

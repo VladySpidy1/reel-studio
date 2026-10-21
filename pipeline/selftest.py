@@ -71,14 +71,14 @@ def t_brief(tmp):
     got = brief.parse_text(SAMPLE)
     want = {**empty, "brand": "YOCASE", "idea": "подарунок подрузі", "hook": "Що подарувати подрузі?",
             "code_word": "ПОДАРУНОК", "music": False, "censor": ["гроші", "знижка"],
-            "inserts": [{"when": "набір", "show": "set.jpg", "fullscreen": False},
-                        {"when": "ось так виглядає", "show": "box.mov", "fullscreen": True}],
+            "inserts": [{"when": "набір", "show": "set.jpg", "fullscreen": False, "silent": False},
+                        {"when": "ось так виглядає", "show": "box.mov", "fullscreen": True, "silent": False}],
             "no_style_changes": True, "speed": 1.2, "notes": "зніми ще раз кінець\nбез правок стилю"}
     assert got == want, got
     std = brief.parse_text("ЦЕНЗУРА: стандартна\nМУЗИКА: «Gimme That Groove»")
     assert std["censor"] == json.loads((PIPE / "studio_default.json").read_text())["censor_sets"]["standard"], std
     assert std["music"] == "Gimme That Groove", std
-    ins = {"when": "набір", "show": "set.jpg", "fullscreen": False}
+    ins = {"when": "набір", "show": "set.jpg", "fullscreen": False, "silent": False}
     for text, part in (                                 # a free phrase under a label is a command, not its value
             ("БРЕНД: YOCASE\nколи кажу «набір» — покажи set.jpg на весь екран",
              {"brand": "YOCASE", "inserts": [{**ins, "fullscreen": True}]}),
@@ -90,7 +90,11 @@ def t_brief(tmp):
             ("БРЕНД:\nYOCASE\nподарунок подрузі\nЦЕНЗУРА: гроші, знижка\nзроби коротше",
              {"brand": "YOCASE", "censor": ["гроші", "знижка"]}),
             ("ВСТАВКИ:\n- коли кажу «набір» — покажи set.jpg\n\n- фото коробки\nбез музики",
-             {"inserts": [ins, {"when": None, "show": "фото коробки", "fullscreen": False}], "music": False})):
+             {"inserts": [ins, {"when": None, "show": "фото коробки", "fullscreen": False, "silent": False}],
+              "music": False}),
+            ("ВСТАВКИ:\n- коли кажу «набір» — покажи set.jpg без звуку\n- коли кажу «набір» — покажи set.jpg "
+             "на весь екран, без звуку.\n- коли кажу «набір» — покажи set.jpg без звуку на весь екран",
+             {"inserts": [{**ins, "silent": True}] + [{**ins, "fullscreen": True, "silent": True}] * 2})):
         got = brief.parse_text(text)
         assert got == {**empty, **part}, (text, got)
 

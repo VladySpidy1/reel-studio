@@ -73,4 +73,7 @@ def main(path):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) != 2 or sys.argv[1] in ("-h", "--help"):
+        print(__doc__)
+        sys.exit(0 if sys.argv[1:] in (["-h"], ["--help"]) else 2)
     main(sys.argv[1])
