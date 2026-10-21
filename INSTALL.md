@@ -47,8 +47,8 @@ it says "dev Mac". Allow about half a day, most of it the smoke reel.
    - sessions must run in the folder itself, not in a worktree;
    - set the mode selector to Manual (it is remembered per folder).
 10. **Health check:** in her app write «перевір студію». Claude runs `.venv/bin/python pipeline/doctor.py --full`:
-    no FAIL; every line OK except at most a disk WARN (it warns under 15 GB free) and a "lock stamp" WARN while
-    `setup_mac.sh` does not write `.venv/reel-studio.lock.sha256` yet; ffmpeg at `/opt/homebrew/bin/ffmpeg`; the
+    no FAIL; every line OK except at most a disk WARN (it warns under 15 GB free); ffmpeg at
+    `/opt/homebrew/bin/ffmpeg`; the
     role line "creator machine, creator settings in place"; and no permission prompt.
 11. **Smoke reel:** with Marina at the keyboard, «новий рілс для YOCASE: тест». Drag `исходники/IMG_2373.MOV` into
     the reel folder that opens, write «файли там», and go through the whole flow: draft, one correction, «фінал»
