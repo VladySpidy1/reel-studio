@@ -13,8 +13,8 @@ change any file, commit and push to `main`.
   `docs/creator/CLAUDE.local.template.md`) has the line `Person: Marina` (an older file with `Mode: creator` means
   the same). Reply in Ukrainian and in plain words. She does not program and does not use Terminal: run every
   command yourself, never ask her to type one. When she wants the studio to work differently, change the code,
-  scripts, skills or brand files for her; before committing, tell her in plain Ukrainian what you changed and show
-  the effect (a draft, a frame), not the code, unless she asks for it.
+  scripts, skills or brand files for her. Before committing, tell her in plain Ukrainian what you changed and show
+  the effect (a draft, a frame), not the code unless she asks; commit and push only after her «так».
 
 Code, comments, docs and commit messages stay in English for both; text shown on screen in a reel is Ukrainian.
 
@@ -38,21 +38,25 @@ Code, comments, docs and commit messages stay in English for both; text shown on
 
 ## Changing the studio (both)
 
-- Before a change: `git pull --rebase`. Work in the main `reel-studio` folder, not in a worktree (a worktree has
-  no `.venv` and no `build/`).
-- Before every push: `.venv/bin/python pipeline/selftest.py` and `.venv/bin/python -m unittest discover tests`; for
-  a change to rendering, a draft of an example reel (`build.py projects/yocase_2373/script.json --draft --name
-  check_2373`) looked at against the last good one. Push small commits; if the push is refused because the other
-  person pushed, `git pull --rebase`, check again, push.
+- Pull only between reels: a pull can bring a change that needs `setup_mac.sh`. With no reel in progress, start a
+  change with `git pull --rebase`; during a reel, commit locally and pull and push after «готово».
+- Work in the main `reel-studio` folder, not in a worktree (a worktree has no `.venv` and no `build/`).
+- Before every push: `.venv/bin/python pipeline/selftest.py` and `.venv/bin/python -m unittest discover tests`.
+  For a change to how reels look or sound, a draft before and after the change of a reel it affects: the reel in
+  progress, the brand's latest reel (`inbox.py reopen` if archived), or the example `projects/yocase_2373` (its
+  prep must exist in `build/yocase_2373/`, INSTALL.md step 12). Compare the two drafts by eye.
+- Push with plain `git push`, small commits. Refused because the other person pushed: `git pull --rebase`, the
+  checks again, push. A rebase conflict: keep both people's changes and run the checks; if the right merge is
+  unclear, `git rebase --abort`, keep the commit local and say plainly whose change collides.
 - `main` is what both Macs pull: it must work on Marina's M1 with 8 GB and macOS 14 or newer. Never rewrite
   `main`'s history (no force push).
 - A change to `pipeline/requirements.lock.txt` (or to what `setup_mac.sh` installs) means both Macs re-run
   `zsh pipeline/setup_mac.sh` after pulling; doctor FAILs on the lock stamp until then. Say so in the commit message.
 - Never commit `inbox/`, `done/`, `build/` or `output/` (per-machine; selftest guards this).
 - The repository is public: no secrets or tokens, no client footage, no licensed fonts, logos or brand photos
-  (`brands/<b>/local/`), and never the third-party skill file.
-- Tracked `.claude/settings.json` holds shared allow rules only; personal settings go in each Mac's
-  `.claude/settings.local.json`.
+  (`brands/<b>/local/`), no unreleased product details or client feedback, and never the third-party skill file.
+- Tracked `.claude/settings.json` holds the shared allow rules and one ask rule (deleting files with
+  `cleanup.py apply`); personal settings go in each Mac's `.claude/settings.local.json`.
 
 ## Making a reel (both)
 
@@ -61,20 +65,25 @@ The `reel` skill drives each reel («змонтуй», «зроби рілс», 
 
 **Health**
 - Run `.venv/bin/python pipeline/doctor.py` at the start of every reel, and `doctor.py --full` after a pull.
-  On a FAIL, fix the cause (its message says how: re-run setup, copy a missing file, free disk). When stuck,
-  `doctor.py --report` writes `output/developer_report.txt` to send to the other person (`open -R` shows it).
+  On a FAIL, fix the cause (its message says how: re-run setup, copy a missing file, free disk). Setup
+  (`zsh pipeline/setup_mac.sh`) runs between reels, in the background with a log. When stuck, `doctor.py --report`
+  writes `output/developer_report.txt` to send to the other person (`open -R` shows it).
+- doctor's role line warns about the old creator restrictions on a Mac set up before 2026-10-28: those rules stop
+  you from removing them. Tell Marina plainly that Vlad does a one-time step (INSTALL.md, "A Mac set up before
+  2026-10-28"); never ask her to use Terminal.
 - If `.venv/bin/python` itself is missing, run `git rev-parse --git-dir --git-common-dir`. Two different paths
-  mean the session runs in a worktree: open a new session in the `reel-studio` folder. Otherwise run
-  `zsh pipeline/setup_mac.sh`.
+  mean the session runs in a worktree: open a new session in the `reel-studio` folder. Otherwise run setup.
 - A brand without a folder in `brands/` needs one first: `brands/<id>/brand.json` and `BRAND.md`, like
   `brands/yocase/`.
-- Outside a reel: «перевір студію» -> `doctor.py --full`; «звіт для Влада» -> `doctor.py --report`, then
+- Outside a reel: «перевір студію» -> `doctor.py --full`; «онови студію» -> `git pull --rebase`, `git push` if
+  there are local commits, then `doctor.py --full`; «звіт для Влада» -> `doctor.py --report`, then
   `open -R output/developer_report.txt`.
 
 **Command forms.** The shared allow rules match the command text, so these forms run without a prompt:
 `.venv/bin/python pipeline/<script>.py ...` from the repo root, with no `cd`, no quotes around paths, no absolute
-interpreter path, no `NAME=value` prefix (`build.py --draft` instead of `X264_PRESET=...`), no `&&` chains. Show
-results with `open output/<reel>_draft.mp4` (or `<reel>.mp4`), a file with `open -R <path>`, a reel folder with
+interpreter path, no `NAME=value` prefix (`build.py --draft` instead of `X264_PRESET=...`), no `&&` chains; git as
+`git pull --rebase`, `git add <paths>`, `git commit -m ...`, plain `git push`. Show results with
+`open output/<reel>_draft.mp4` (or `<reel>.mp4`), a file with `open -R <path>`, a reel folder with
 `open inbox/<reel>/`. Reel ids are ASCII (`inbox.py new` makes them), so paths never need quotes. A reel's script is
 JSON (`inbox/<reel>/script.json`); what a reel needs and the pipeline cannot do yet is a change to the studio
 (above), not a one-off script.
@@ -92,9 +101,14 @@ JSON (`inbox/<reel>/script.json`); what a reel needs and the pipeline cannot do 
 - During long steps: Claude stays open, the Mac on power, the lid open.
 
 **Corrections.** When a correction sounds general, ask («Запам'ятати це для всіх рілсів <бренду>?» to Marina).
-On yes, append it to `learned/brands/<brand>.md` (or `learned/formats/<format>.md`, `learned/general.md`) in the
-format of `learned/README.md` and commit it; it reaches the other Mac with the next push.
+On yes, it goes into the repository, never into Claude's auto memory (that stays on one Mac):
+- a number of a brand's or format's look (subtitle size, colour, spacing, music level) is a studio change: edit
+  `brands/<b>/brand.json` (TOSUMI's look too: never `pipeline/style_default.json`) or `formats/<f>/format.json`;
+- anything else, a rule in words for whoever writes the next script: append it to `learned/brands/<brand>.md` (or
+  `learned/formats/<format>.md`, `learned/general.md`) in the format of `learned/README.md`.
+
+Commit it during the reel; it is pulled and pushed after «готово».
 
 **When a reel is done** («готово», «опублікувала»): `inbox.py archive <reel>`, then `cleanup.py plan <reel>`, ask
-«Звільнити N ГБ?», and on yes `cleanup.py apply` (it deletes files, so it is deliberately not in the allow rules). A
-fix for an archived reel starts with `inbox.py reopen <reel>`.
+«Звільнити N ГБ?», and on yes `cleanup.py apply` (an ask rule makes it prompt too). Then, if there are local
+commits: `git pull --rebase`, selftest, `git push`. A fix for an archived reel starts with `inbox.py reopen <reel>`.

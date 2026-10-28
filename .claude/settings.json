@@ -23,7 +23,6 @@
       "Bash(.venv/bin/python pipeline/sheet.py *)",
       "Bash(.venv/bin/python pipeline/times.py *)",
       "Bash(.venv/bin/python pipeline/trim.py *)",
-      "Bash(git pull --ff-only)",
       "Bash(open output/*.mp4)",
       "Bash(open inbox/*/)",
       "Bash(open done/*/)",
@@ -37,7 +36,36 @@
       "Edit(/inbox/**)",
       "Edit(/learned/**)",
       "Edit(/build/**)",
-      "Edit(/output/**)"
+      "Edit(/output/**)",
+      "Bash(.venv/bin/python -m unittest discover tests)",
+      "Bash(zsh pipeline/setup_mac.sh)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git fetch)",
+      "Bash(git pull --rebase)",
+      "Bash(git rebase --continue)",
+      "Bash(git rebase --abort)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push)",
+      "Edit(/pipeline/**)",
+      "Edit(/brands/**)",
+      "Edit(/formats/**)",
+      "Edit(/projects/**)",
+      "Edit(/docs/**)",
+      "Edit(/tests/**)",
+      "Edit(/.claude/skills/**)",
+      "Edit(/CLAUDE.md)",
+      "Edit(/CONTEXT.md)",
+      "Edit(/INSTALL.md)",
+      "Edit(/README.uk.md)"
+    ],
+    "ask": [
+      "Bash(.venv/bin/python pipeline/cleanup.py apply)",
+      "Bash(.venv/bin/python pipeline/cleanup.py apply *)"
     ]
   }
 }

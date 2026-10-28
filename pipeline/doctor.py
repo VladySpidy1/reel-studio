@@ -229,11 +229,15 @@ def check_git():
         say("WARN", "local changes", f"git status failed: {r.stderr.strip()[:200]}")
         return
     changed = [ln[3:] for ln in r.stdout.splitlines() if ln.strip()]
+    ahead = sh(["git", "-C", str(ROOT), "rev-list", "--count", "@{u}..HEAD"])
+    unpushed = int(ahead.stdout.strip() or 0) if ahead.returncode == 0 else 0
     if changed:
         say("WARN", "local changes", f"{len(changed)} tracked files changed here ({', '.join(changed[:4])}"
-                                     f"{', ...' if len(changed) > 4 else ''}): commit or discard them before the next pull")
-    else:
-        say("OK", "local changes", "none in tracked files")
+                                     f"{', ...' if len(changed) > 4 else ''}): commit them before the next pull")
+    if unpushed:
+        say("WARN", "local changes", f"{unpushed} commits not pushed yet: git pull --rebase, selftest, git push")
+    if not changed and not unpushed:
+        say("OK", "local changes", "none in tracked files, nothing unpushed")
 
 
 def marina_machine():
@@ -250,7 +254,11 @@ OLD_LOCKS = ("Bash(git push *)", "Bash(git commit *)", "Edit(/pipeline/**)", "Ba
 def check_role():
     marina, legacy = marina_machine()
     lp = ROOT / ".claude" / "settings.local.json"
-    deny = (common.load_json(lp).get("permissions") or {}).get("deny", []) if lp.exists() else []
+    try:
+        deny = (common.load_json(lp).get("permissions") or {}).get("deny", []) if lp.exists() else []
+    except ValueError:
+        say("WARN", "role", ".claude/settings.local.json is not valid JSON: fix it or delete it")
+        return
     if any(r in deny for r in OLD_LOCKS):
         say("WARN", "role", ".claude/settings.local.json still has the old creator restrictions (no commits, no "
                             "code edits): delete that file (INSTALL.md, Updates)")

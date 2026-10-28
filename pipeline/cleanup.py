@@ -2,7 +2,7 @@
 
 python cleanup.py plan <reel> [<reel> ...] [--all] [--temp]   shows what would go, writes build/cleanup_plan.json
 python cleanup.py plan --temp                                 only the temporary render folders
-python cleanup.py apply                                       deletes exactly that plan (an ask rule on her Mac)
+python cleanup.py apply                                       deletes exactly that plan (always asks)
 
 The plan names files exactly, never by prefix, so <reel> never matches <reel>-2:
   output/<reel>_draft.mp4 and output/<reel>[_draft|_no_music]_project/;

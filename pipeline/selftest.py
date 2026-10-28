@@ -18,10 +18,12 @@ python selftest.py      one line per failure, then a summary; exit 1 on any fail
 - tracked: nothing under inbox/, done/, build/ or output/ is tracked (a pull would overwrite that Mac's file), and
   no CLAUDE.local.md is in the repository (Claude Code would load it);
 - ignore: .gitignore keeps per-machine folders and files out of git, and learned/ and the docs/creator templates in;
-- settings: the tracked .claude/settings.json only allows (both Macs load it), and never allows cleanup.py apply.
+- settings: the tracked .claude/settings.json only allows, and asks before cleanup.py apply (no allow rule
+  matches it).
 """
 import contextlib
 import fcntl
+import fnmatch
 import io
 import json
 import os
@@ -292,10 +294,15 @@ def t_ignore(tmp):
 
 def t_settings(tmp):
     shared = json.loads((ROOT / ".claude" / "settings.json").read_text())
-    assert set(shared) == {"permissions"} and set(shared["permissions"]) == {"allow"}, \
-        "the tracked settings may only allow (every session of both machines loads them)"
-    assert not any("cleanup.py apply" in r for r in shared["permissions"]["allow"]), "deleting files must ask"
-    assert all(re.fullmatch(r"[A-Z]\w*(\(.+\))?", r) for r in shared["permissions"]["allow"]), "malformed rule"
+    perm = shared["permissions"]
+    assert set(shared) == {"permissions"} and set(perm) == {"allow", "ask"}, \
+        "the tracked settings only allow, plus the ask rule for deleting (both machines load them; no deny)"
+    apply = ".venv/bin/python pipeline/cleanup.py apply"
+    assert f"Bash({apply})" in perm["ask"] and f"Bash({apply} *)" in perm["ask"], "deleting files must ask"
+    bash = [m.group(1) for r in perm["allow"] for m in [re.fullmatch(r"Bash\((.+)\)", r)] if m]
+    assert not any(fnmatch.fnmatchcase(c, b) for b in bash for c in (apply, apply + " x")), \
+        "an allow rule lets cleanup.py apply run without asking"
+    assert all(re.fullmatch(r"[A-Z]\w*(\(.+\))?", r) for r in perm["allow"] + perm["ask"]), "malformed rule"
 
 
 TESTS = [t_brief, t_cmap, t_cleanup, t_inbox, t_lock, t_refs, t_tracked, t_ignore, t_settings]

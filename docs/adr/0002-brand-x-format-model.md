@@ -19,7 +19,7 @@ frames and transcripts, not motion, and per-reel analysis is noisy. What actuall
   appear (first reel of the genre + 2–3 competitor references).
 - A new reel = brand + format + footage + brief. The tool asks for whatever the brief is missing, e.g. which
   brand.
-- Brand onboarding is a one-time session on the developer's account: brand book (when available) + 3–5 of the
+- Brand onboarding (since ADR-0010 on either Mac) is a one-time session: brand book (when available) + 3–5 of the
   creator's best reels for that brand. A reference attached to a single reel is format onboarding, saved for
   reuse.
 

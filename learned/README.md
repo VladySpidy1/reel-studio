@@ -16,7 +16,8 @@ One entry per line, appended at the end of the file:
 ```
 
 The words of the correction stay in their language inside «»; the rule after the arrow is concrete and in English
-(what to do, where).
+(what to do, where). The repository is public: write the rule only, never unreleased product names, prices, client
+feedback or anything under NDA.
 
 How rules flow:
 1. During a reel someone corrects something that sounds general. Claude asks whether to remember it for every reel

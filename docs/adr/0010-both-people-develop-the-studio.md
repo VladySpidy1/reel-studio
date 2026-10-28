@@ -1,7 +1,8 @@
 # 0010 — Both people develop the studio
 
 Status: Accepted (2026-10-28). Supersedes the creator lock-down of the 2026-10-20 content-studio design
-(`docs/superpowers/specs/2026-10-20-content-studio/marina-layer.md`).
+(`docs/superpowers/specs/2026-10-20-content-studio/marina-layer.md`) and ADR-0002's "brand onboarding is a one-time
+session on the developer's account" (either Mac onboards a brand).
 
 ## Context
 
@@ -19,7 +20,8 @@ with her own Claude exactly as he does.
 - Shared discipline instead of locks: `git pull --rebase` before a change, selftest and unit tests before a push,
   small commits, no force push, `main` must run on her M1 with 8 GB (CLAUDE.md "Changing the studio").
 - `learned/` is tracked: corrections from a reel are committed and reach the other Mac with the next pull.
-- `cleanup.py apply` stays outside the shared allow rules: deleting files asks on both Macs.
+- Deleting files asks on both Macs: the shared `.claude/settings.json` has an ask rule for `cleanup.py apply`, and
+  selftest checks that no allow rule matches it.
 
 ## Consequences
 

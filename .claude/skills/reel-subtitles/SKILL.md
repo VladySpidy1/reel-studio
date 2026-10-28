@@ -15,8 +15,8 @@ brand's look in `brands/<brand>/`, the format's structure in `formats/<format>/`
 `projects/<name>/script.json` for the developer's example reels. `<reel>` below is either folder's name.
 
 ## 0. Health
-`.venv/bin/python pipeline/doctor.py`; on a FAIL stop (creator: CLAUDE.md "Health"). Never run setup in a reel
-session: `pipeline/setup_mac.sh` is the developer's, done in person (INSTALL.md).
+`.venv/bin/python pipeline/doctor.py`; on a FAIL follow CLAUDE.md "Health". Setup (`zsh pipeline/setup_mac.sh`)
+runs between reels, never during one.
 
 ## 1. Prepare the footage (~10 min per 4 min of raw clips on an M2 Pro)
 - Creator reel: `.venv/bin/python pipeline/inbox.py prep <reel>` (her videos in shooting order; insert files in
@@ -92,7 +92,7 @@ and `formats/<format>/FORMAT.md`). The TOSUMI comedy skit only:
 ```
 lint must show 0 FAIL (a creator reel also gets `brief:` lines). The build prints problems first; its checks
 (`build/meta.json` "checks", and the report's `checks`) FAIL before the render. `--allow-check-fail` renders anyway:
-developer only. The review sheet has one tile per screen and insert; the `--phone` sheet draws the Instagram crop.
+debugging only, never a reel's final. The review sheet has one tile per screen and insert; the `--phone` sheet draws the Instagram crop.
 
 | Finding | Fix |
 |---|---|

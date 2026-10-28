@@ -92,7 +92,8 @@ doubt. No subagents, no workflows, no Monitor, no `sleep`.
 ## 5. After the draft
 - **Correction** in her words: edit the script (brief.md "Corrections"), lint, (bg) draft, review, report. When it
   sounds general, ask «Запам'ятати це для всіх рілсів <бренду>?»; on «так» append it to `learned/brands/<brand>.md`
-  (or `learned/formats/<format>.md`, `learned/general.md`) as `learned/README.md` shows, and commit it.
+  (or `learned/formats/<format>.md`, `learned/general.md`) as `learned/README.md` shows, or change the brand's or
+  format's JSON when it is a number of the look (CLAUDE.md "Corrections"); commit it.
 - **«фінал» / «добре»**: the checklist below holds, then (bg) the final, and when woken (bg) the no-music version:
   ```
   .venv/bin/python pipeline/build.py inbox/<reel>/script.json > build/<reel>/logs/run_final.log 2>&1
@@ -106,7 +107,8 @@ doubt. No subagents, no workflows, no Monitor, no `sleep`.
   Woken: `open -R output/<reel>_project`.
 - **«готово» / «опублікувала»**: `.venv/bin/python pipeline/inbox.py archive <reel>`, then
   `.venv/bin/python pipeline/cleanup.py plan <reel>`; ask «Звільнити N ГБ?»; on «так»
-  `.venv/bin/python pipeline/cleanup.py apply` (her one approval click).
+  `.venv/bin/python pipeline/cleanup.py apply` (it asks before deleting). Then, if there are local commits:
+  `git pull --rebase`, `.venv/bin/python pipeline/selftest.py`, `git push`.
 - **«правка до рілса …»**: `.venv/bin/python pipeline/inbox.py list` finds it; then (bg)
   `.venv/bin/python pipeline/inbox.py reopen <reel> > build/<reel>/logs/run_reopen.log 2>&1` («Відкрила рілс знову,
   роблю правку.»); woken, the correction loop.

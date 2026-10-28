@@ -15,8 +15,8 @@ numbers live only there. Evidence so far: `projects/yocase_line` (product lineup
 - Check which bottle is in her hand before using a shot (`formats/product-lineup/FORMAT.md`, shooting notes).
 - No cartoon SFX in any format; no camera moves under 10 % (they read as nothing; lint warns); no filler made from
   between-take fragments.
-- Register: «ти» (yocase_line and 2373; 2371 and 2477 used «ви»). Ask the developer before switching.
-- Music: Gimme that Groove from its groove section. One reel of evidence (yocase_line); the developer may change it.
+- Register: «ти» (yocase_line and 2373; 2371 and 2477 used «ви»). Switch only when the brief or the person at the keyboard asks; record it here.
+- Music: Gimme that Groove from its groove section. One reel of evidence (yocase_line); change it here when another track proves better.
 - No standing censor list; «ЦЕНЗУРА:» in the brief adds words per reel.
 
 ## Notes

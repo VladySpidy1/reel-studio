@@ -167,7 +167,7 @@ handles mechanics (ADR-0001).
   CapCut desktop re-checked on 2026-10-10: still no timeline import; its brand-work terms are a further reason
   not to target it.
 - Creator's Claude plan: decided by measuring real batches; Max is acceptable.
-- Distribution: public GitHub repository; the creator's machine pulls updates. No secrets, keys, brand books or
+- Distribution: public GitHub repository; both Macs pull and push `main` (ADR-0010). No secrets, keys, brand books or
   licensed assets in git: licensed brand fonts, logos and photos live in the gitignored `brands/<brand>/local/`
   and are copied to her Mac in person.
 
