@@ -22,7 +22,7 @@ numbers live only there. Evidence so far: `projects/yocase_line` (product lineup
 ## Notes
 - Licensed fonts, logos and product photos go in `brands/yocase/local/` (gitignored, installed in person). The repo
   is public: no brand book or NDA material here.
-- Corrections from reels go to `learned/brands/yocase.md` (gitignored); the developer promotes them into this file.
+- Corrections from reels go to `learned/brands/yocase.md` (tracked, shared by both Macs); rules that hold are folded into this file.
 
 ## Learned rules
 - 2026-10-10: «видео мертвое» - every visible gesture is an edit point; moves under 10 % and in-out blips read as

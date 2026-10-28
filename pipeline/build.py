@@ -7,7 +7,7 @@ python build.py ../projects/tosumi_hair/script.json [--draft] [--name out] [--pr
 summary (problems first, then one line per stage); the full output is in build/<reel>/logs/build_<name>.log, and
 on the terminal too with --verbose. One build at a time (build/.studio.lock): a second one exits 2.
 The build slot (build/meta.json, camera.json, timeline.json, overlay/) holds one reel: --skip-timeline and
---skip-overlay refuse unless it holds this script (--force: developer only), and a slot whose checks FAIL is not
+--skip-overlay refuse unless it holds this script (--force: debugging only), and a slot whose checks FAIL is not
 rendered without --allow-check-fail. The script is resolved once (resolve.py: studio -> brand -> format -> script);
 the log starts with the resolver summary, and build/<reel>/resolved_<name>.json keeps what was rendered.
 Music and SFX are found by name (assets.py, also in the script's folder); a missing one is skipped with a warning,
@@ -138,7 +138,7 @@ def main():
     ap.add_argument("--draft", action="store_true", help="fast preview: x264 veryfast, default name <reel>_draft")
     ap.add_argument("--procs", type=int, default=default_procs(), help="render processes (default: 2 on 8 GB RAM, else 4)")
     ap.add_argument("--verbose", action="store_true", help="the full output on the terminal (it is always in the log)")
-    ap.add_argument("--force", action="store_true", help="developer only: use the build slot although it holds another reel")
+    ap.add_argument("--force", action="store_true", help="debugging only: use the build slot although it holds another reel")
     ap.add_argument("--allow-check-fail", action="store_true", help="render although the slot's checks FAIL")
     a = ap.parse_args()
     reel = reel_id(a.script)

@@ -4,7 +4,7 @@ python export_fcpxml.py ../projects/<name>/script.json [--name out] [--freeze ba
                          [--verbose] [--force]
 
 Run after build.py (it reads build/meta.json, camera.json, timeline.json and the audio mix); it refuses (exit 2)
-while the build slot holds another reel (--force: developer only). The terminal gets a short summary; the full output
+while the build slot holds another reel (--force: debugging only). The terminal gets a short summary; the full output
 is in build/<reel>/logs/export_<name>.log. Writes
 output/<name>_project/<name>.fcpxml plus media/ (self-contained: source clips, SFX and music are hard-linked in):
   - the picture: the source clips cut like the reel (spine), product holds as freeze clips;
@@ -302,7 +302,7 @@ def main():
     ap.add_argument("--freeze", default="baked", choices=["baked", "png", "timemap"])
     ap.add_argument("--procs", type=int, default=default_procs(), help="render processes (default: 2 on 8 GB RAM, else 4)")
     ap.add_argument("--skip-layers", action="store_true", help="reuse rendered block, doodle, insert and brand clips")
-    ap.add_argument("--force", action="store_true", help="developer only: export although build/ holds another reel")
+    ap.add_argument("--force", action="store_true", help="debugging only: export although build/ holds another reel")
     ap.add_argument("--verbose", action="store_true", help="the full output on the terminal (it is always in the log)")
     a = ap.parse_args()
     name = a.name or reel_id(a.script)

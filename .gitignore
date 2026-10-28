@@ -28,11 +28,9 @@ Thumbs.db
 # Licensed brand fonts, logos and photos (the repo is public; installed on each Mac in person)
 brands/*/local/
 
-# The creator's Mac writes only to these (never track anything here: a pull would overwrite her files)
+# Per-machine work and files (reels in progress, archived reels, own assets, who is at the keyboard)
 inbox/
 done/
-learned/*
-!learned/README.md
 assets/local/
 /CLAUDE.local.md
 

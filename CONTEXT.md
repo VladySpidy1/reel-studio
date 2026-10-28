@@ -11,9 +11,10 @@ see `docs/adr/`.
 
 - **Creator** (the developer's wife): actress and social-media creator. Shoots and edits ~30 reels a month for
   2–3 brands, in sessions of 5–10 reels, 3–5 sessions a month. Edits in CapCut today, is not technical, works
-  in Ukrainian. Uses the Claude desktop app, never a terminal. Brands review her videos occasionally.
-- **Developer**: builds and maintains the toolkit on his own Claude account. All R&D, brand and format
-  onboarding and graphic-template design happen there; the creator only runs the finished tool.
+  in Ukrainian. Uses the Claude desktop app, never a terminal. Brands review her videos occasionally. Since
+  2026-10-28 she also changes the studio with her own Claude, with the same rights as the developer (ADR-0010).
+- **Developer**: built the toolkit and keeps developing it on his own Claude account. Both Macs commit and push to
+  `main`; `CLAUDE.md` only switches the language and how much Claude explains.
 
 ## Goal
 
@@ -69,9 +70,9 @@ handles mechanics (ADR-0001).
   app at posting time (in-app sounds cannot be baked in).
 - **Hook variants** — 2–3 alternative openings rendered from the same timeline, for Instagram trial reels.
 - **Session types** — Research & pre-production, Batch edit, Results review (ADR-0007).
-- **Learned rules** — corrections the creator makes, appended on her Mac to the gitignored `learned/`
-  (`general.md`, `brands/<brand>.md`, `formats/<format>.md`) so the next reel does not repeat the mistake; the
-  `reel` skill reads them before writing a script, and the developer promotes them by hand into `brands/` or
+- **Learned rules** — corrections from reels, appended to the tracked `learned/` (`general.md`,
+  `brands/<brand>.md`, `formats/<format>.md`) and committed, so the next reel on either Mac does not repeat the
+  mistake; the `reel` skill reads them before writing a script, and rules that hold are folded into `brands/` or
   `formats/`.
 - **Research account** — a separate Instagram account (not the creator's working account, not a brand's)
   used for browsing competitors.
@@ -90,6 +91,7 @@ handles mechanics (ADR-0001).
 | [0007](docs/adr/0007-three-session-types-and-competitor-research.md) | Three session types; competitor research; weekly stats loop |
 | [0008](docs/adr/0008-code-drawn-graphics-template-library.md) | Code-drawn graphics: per-brand template library plus bespoke graphics |
 | [0009](docs/adr/0009-raster-inserts-outside-the-matte.md) | Raster inserts and brand image layers are Python layers outside the person matte |
+| [0010](docs/adr/0010-both-people-develop-the-studio.md) | Both people develop the studio with the same rights; only the language differs |
 
 ## Current state (2026-10-21)
 
@@ -127,7 +129,7 @@ handles mechanics (ADR-0001).
   «стоп» cutter of roadmap 4 is part of trim; HDR tone-mapping still is not built):
   - Creator flow: the `/reel` skill (`.claude/skills/reel/`: brief -> prep -> template -> trim -> times -> screens,
     inserts, CTA -> lint -> draft -> self-review -> Ukrainian report -> final + no-music -> archive), her brief
-    checked by lint, `learned/` for her corrections. `reel-subtitles` is now a reference the model never loads on
+    checked by lint, `learned/` for corrections (shared through git since 2026-10-28). `reel-subtitles` is now a reference the model never loads on
     its own. Tools: `doctor.py`, `inbox.py`, `cleanup.py`, `brief.py`, `selftest.py`; one heavy job at a time
     (studio lock); compact terminal output with full logs in `build/<reel>/logs/`; review images at most 1200 px.
   - Text: asterisk censorship, Latin brand words aligned to the transcript (`terms`), hook and CTA presets (the CTA

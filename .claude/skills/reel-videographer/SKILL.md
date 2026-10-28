@@ -85,8 +85,9 @@ being named? Any junk frame (hand dropping, walking in, empty wall, defocused mu
 label, face or bottle? Captions inside the phone crop lines (x 128-952, y 250-1480)? A cut that jumps for no reason?
 Fix and re-render; the creator should never be the one who finds these.
 
-## 5. Learned rules (developer-promoted, with the date)
-Creator corrections go to `learned/` first (the `reel` skill appends them); only the developer promotes them here.
+## 5. Learned rules (with the date)
+Corrections from reels go to the tracked `learned/` first (the `reel` skill appends them); rules that hold are folded
+in here.
 - 2026-10-10, YOCASE: "видео мертвое" - every visible gesture is an edit point: the sideways hand sweep becomes a
   swipe ("камера поворачивается"), the bottle pushed to the lens becomes a zoom into the close-up. Moves under
   10 % and in-out blips read as nothing.

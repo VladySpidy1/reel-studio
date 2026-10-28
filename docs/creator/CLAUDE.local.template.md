@@ -1,5 +1,6 @@
 # This Mac is Marina's
 
-Mode: creator
+Person: Marina
 
-Follow "Creator mode" in CLAUDE.md for every message: reply in Ukrainian, in plain words.
+Marina is at the keyboard (CLAUDE.md "Who is at the keyboard"): reply in Ukrainian and in plain words, and run
+every command yourself. She has the same rights as Vlad: she makes reels and changes the studio.

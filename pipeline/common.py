@@ -104,7 +104,7 @@ def reel_id(script_path):
 def require_slot(script=None, need_pass=False, force=False, render=None):
     """The guard of the single build slot (build/meta.json, camera.json, timeline.json, overlay/). Exits 2 unless
     meta.json was written for `script` (and, with `render`, that video was rendered from it); force skips this
-    (developer only). need_pass also refuses while the slot's checks FAIL. Returns meta.json."""
+    (debugging only). need_pass also refuses while the slot's checks FAIL. Returns meta.json."""
     p = BUILD / "meta.json"
     meta = load_json(p) if p.exists() else {}
 

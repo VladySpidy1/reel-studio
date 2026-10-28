@@ -131,9 +131,9 @@ the repository folder afterwards (absolute file URLs).
 `build/meta.json`); review and export run right after the build of the SAME reel, and they refuse another reel's
 slot.
 
-## Learned rules (developer-promoted, with the date)
-Creator corrections go to `learned/` (the `reel` skill); only the developer promotes them into the brand, format or
-this file.
+## Learned rules (with the date)
+Corrections from reels go to the tracked `learned/` first (the `reel` skill); rules that hold are folded into the
+brand, the format or this file by whoever works on them.
 - 2026-10-13, YOCASE: "между текстом должны быть хорошие отступы, нормальные, чтоб текст не был впритык" - the
   TOSUMI tight spacing is TOSUMI-only. The YOCASE spacing and colours are in `brands/yocase/brand.json`:
   `"brand": "yocase"`, no `style` in the script. With taller lines keep blocks to 2-3 lines and split long screens.

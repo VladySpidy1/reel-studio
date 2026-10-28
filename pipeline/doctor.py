@@ -2,7 +2,7 @@
 
 python doctor.py                     quick checks, no torch and no browser: location, Python and its lock stamp,
                                      macOS, RAM, ffmpeg and its encoders, Playwright's Chromium, model caches, fonts
-                                     and brand files, disk, local changes, the creator settings, housekeeping
+                                     and brand files, disk, local changes, who is at the keyboard, housekeeping
 python doctor.py --full              also torch/MPS and the matting model, a Chromium render of Cyrillic in the studio
                                      font, test encodes, and a real decode plus a 2 s transcription through prep.py's
                                      own code path (about 30 s and 2 GB of RAM; after every update)
@@ -10,7 +10,7 @@ python doctor.py --clips <dir|file> ... [--speed k]
                                      a reel's footage (inbox/<reel>): HDR, length, insert files, disk need
 python doctor.py --script <script.json>
                                      every character the reel draws is in the font that draws it; build files exist
-python doctor.py --report            also writes output/developer_report.txt for the developer
+python doctor.py --report            also writes output/developer_report.txt to send to the other person
 
 Prints "OK|WARN|FAIL <key>: <message>", problems first, and exits 1 on any FAIL. Only the standard library is
 imported at start (each check imports what it tests), so it still reports when .venv packages are broken.
@@ -78,7 +78,7 @@ def check_python():
     if Path(sys.prefix).resolve() != venv.resolve():
         say("FAIL", "python", f"run with .venv/bin/python, not {sys.executable}")
     elif v[:2] != (3, 12):
-        say("FAIL", "python", f"3.12 expected, .venv has {platform.python_version()}: setup_mac.sh (developer)")
+        say("FAIL", "python", f"3.12 expected, .venv has {platform.python_version()}: re-run zsh pipeline/setup_mac.sh")
     else:
         say("OK", "python", f"{platform.python_version()} in .venv")
     stamp = venv / "reel-studio.lock.sha256"
@@ -87,8 +87,8 @@ def check_python():
         say("WARN", "lock stamp", ".venv has no stamp of requirements.lock.txt (installed before stamps; "
                                   "setup_mac.sh writes it)")
     elif stamp.read_text().split()[:1] != [want]:
-        say("FAIL", "lock stamp", ".venv was installed from another requirements.lock.txt: the developer re-runs "
-                                  "setup_mac.sh («Потрібен Влад»)")
+        say("FAIL", "lock stamp", ".venv was installed from another requirements.lock.txt: re-run "
+                                  "zsh pipeline/setup_mac.sh")
     else:
         say("OK", "lock stamp", ".venv matches requirements.lock.txt")
 
@@ -206,7 +206,7 @@ def check_fonts():
                 problems.append(f"{p.parent.name}: music {music} not found in assets/")
     if problems:
         for x in problems:
-            say("FAIL", "fonts", x + " («Потрібен Влад»)")
+            say("FAIL", "fonts", x + " (copy the brand's local/ folder, INSTALL.md step 7)")
     else:
         say("OK", "fonts", f"{len(files)} font files of the studio and {len(looks) - 1} brands draw "
                            "Ukrainian and Latin in both cases, digits and ʼ’№«»–—*; brand files present")
@@ -216,7 +216,7 @@ def check_disk(need):
     free = shutil.disk_usage(ROOT).free
     msg = f"{gb(free)} free, a reel needs ~{gb(need)} plus {SWAP_GB:.0f} GB headroom"
     if free - need < SWAP_GB * 1e9:
-        say("FAIL", "disk", msg + ": free space first (cleanup of archived reels, or «Потрібен Влад»)")
+        say("FAIL", "disk", msg + ": free space first (cleanup.py plan of archived reels)")
     elif free < LOW_DISK_GB * 1e9:
         say("WARN", "disk", msg + f"; under {LOW_DISK_GB:.0f} GB free")
     else:
@@ -231,32 +231,35 @@ def check_git():
     changed = [ln[3:] for ln in r.stdout.splitlines() if ln.strip()]
     if changed:
         say("WARN", "local changes", f"{len(changed)} tracked files changed here ({', '.join(changed[:4])}"
-                                     f"{', ...' if len(changed) > 4 else ''}): a pull that touches them will fail")
+                                     f"{', ...' if len(changed) > 4 else ''}): commit or discard them before the next pull")
     else:
         say("OK", "local changes", "none in tracked files")
 
 
-def creator_machine():
+def marina_machine():
     p = ROOT / "CLAUDE.local.md"
-    return p.is_file() and re.search(r"(?mi)^mode:\s*creator\b", p.read_text(encoding="utf-8")) is not None
+    text = p.read_text(encoding="utf-8") if p.is_file() else ""
+    return re.search(r"(?mi)^(person:\s*marina|mode:\s*creator)\b", text) is not None, \
+        re.search(r"(?mi)^mode:\s*creator\b", text) is not None
+
+
+# rules of the old creator template (before 2026-10-28) that kept Marina from changing the studio
+OLD_LOCKS = ("Bash(git push *)", "Bash(git commit *)", "Edit(/pipeline/**)", "Bash(zsh pipeline/setup_mac.sh *)")
 
 
 def check_role():
-    if not creator_machine():
-        say("OK", "role", "developer machine (CLAUDE.local.md does not say Mode: creator)")
-        return
-    tpl = common.load_json(ROOT / "docs" / "creator" / "claude-settings.local.json")
+    marina, legacy = marina_machine()
     lp = ROOT / ".claude" / "settings.local.json"
-    have = common.load_json(lp) if lp.exists() else {}
-    perm, want = have.get("permissions", {}), tpl["permissions"]
-    lack = [r for kind in ("deny", "ask") for r in want.get(kind, []) if r not in perm.get(kind, [])]
-    lack += [k for k in ("defaultMode",) if perm.get(k) != want.get(k)]
-    lack += [k for k in ("autoMemoryEnabled",) if have.get(k) != tpl.get(k)]
-    if lack:
-        say("WARN", "role", f"creator machine, but .claude/settings.local.json lacks {len(lack)} settings of "
-                            f"docs/creator/claude-settings.local.json ({', '.join(lack[:3])}...): copy it again")
+    deny = (common.load_json(lp).get("permissions") or {}).get("deny", []) if lp.exists() else []
+    if any(r in deny for r in OLD_LOCKS):
+        say("WARN", "role", ".claude/settings.local.json still has the old creator restrictions (no commits, no "
+                            "code edits): delete that file (INSTALL.md, Updates)")
+    elif legacy:
+        say("WARN", "role", "CLAUDE.local.md has the old 'Mode: creator' line: copy "
+                            "docs/creator/CLAUDE.local.template.md again (INSTALL.md, Updates)")
     else:
-        say("OK", "role", "creator machine, creator settings in place")
+        say("OK", "role", "Marina's Mac (CLAUDE.local.md)" if marina else "Vlad's Mac (no 'Person: Marina' in "
+                                                                          "CLAUDE.local.md)")
 
 
 def check_housekeeping():
@@ -461,7 +464,7 @@ def decode_and_transcribe(clip, td):
 
 
 def report(lines):
-    """output/developer_report.txt: what the developer needs to help from afar (never ~/.claude or the env)."""
+    """output/developer_report.txt: what the other person needs to help from afar (never ~/.claude or the env)."""
     import inbox
     out = ["Reel Studio developer report " + time.strftime("%Y-%m-%d %H:%M"), "", "== doctor =="] + lines
     chip = sh(["sysctl", "-n", "machdep.cpu.brand_string"]).stdout.strip()

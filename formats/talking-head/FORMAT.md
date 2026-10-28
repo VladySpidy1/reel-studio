@@ -58,4 +58,4 @@ self-install, ×1.3 by default, and its lime/handwritten look.
 - Brand names misheard by whisper are fixed by `terms`, not by literal lines (2371, 2373).
 - Prefer automatic layout (2477) over hand-placed blocks (2373).
 - Baked-in graphics go in `style.layout.exclude+` (screen-wide) or `place.exclude` (per block).
-- Corrections from reels go to `learned/formats/talking-head.md` (gitignored); the developer promotes them here.
+- Corrections from reels go to `learned/formats/talking-head.md` (tracked, shared by both Macs); rules that hold are folded into this file.

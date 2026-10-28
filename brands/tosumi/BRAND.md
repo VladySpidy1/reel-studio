@@ -19,7 +19,7 @@ Numbers live only in the JSON files; this file holds the rules in words.
 - The skit-only exceptions (a whoosh on every take cut, cartoon gags) live in `formats/skit-hoche-a/FORMAT.md`.
 - Licensed fonts, logos and product photos go in `brands/tosumi/local/` (gitignored, installed in person). The repo
   is public: no brand book or NDA material here.
-- Corrections from reels go to `learned/brands/tosumi.md` (gitignored); the developer promotes them into this file.
+- Corrections from reels go to `learned/brands/tosumi.md` (tracked, shared by both Macs); rules that hold are folded into this file.
 
 ## Learned rules
 (none yet)

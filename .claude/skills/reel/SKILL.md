@@ -6,7 +6,8 @@ argument-hint: "[бриф або назва рілса]"
 
 # Reel: the creator flow
 
-Talk to her in Ukrainian and plain words; never show her a command or a path (CLAUDE.md "Creator mode"). `<reel>`
+Talk to the person at the keyboard as CLAUDE.md "Who is at the keyboard" says (to Marina: Ukrainian, plain words,
+no commands or paths). `<reel>`
 is the id `inbox.py new` prints (ASCII). Run each command from the repo root exactly as written, on one line: the
 permission rules match the text.
 
@@ -25,8 +26,8 @@ doubt. No subagents, no workflows, no Monitor, no `sleep`.
 ## 1. New reel («новий рілс для YOCASE: …», /reel, a pasted brief)
 1. `.venv/bin/python pipeline/doctor.py`. A FAIL: CLAUDE.md "Health", stop.
 2. The brand from her words; `.venv/bin/python pipeline/resolve.py --list` lists the ids and aliases. None given: ask
-   only «Для якого бренду цей рілс — TOSUMI чи YOCASE?». Not in the list: «Цей бренд ще не налаштований — це робить
-   Влад», stop.
+   only «Для якого бренду цей рілс — TOSUMI чи YOCASE?». Not in the list: offer to set the brand up first
+   (`brands/<id>/brand.json` and `BRAND.md`, like `brands/yocase/`), then continue.
 3. `.venv/bin/python pipeline/inbox.py new <brand> <title words>` prints `<reel>`; then `open inbox/<reel>/`.
 4. A brief she pasted in chat: write it into `inbox/<reel>/brief.md` as labelled lines (БРЕНД:, ХУК:, …).
 5. Say «Перетягни сюди відео з телефона, а картинки й відео для вставок — у папку inserts. Бриф напиши тут або у
@@ -91,7 +92,7 @@ doubt. No subagents, no workflows, no Monitor, no `sleep`.
 ## 5. After the draft
 - **Correction** in her words: edit the script (brief.md "Corrections"), lint, (bg) draft, review, report. When it
   sounds general, ask «Запам'ятати це для всіх рілсів <бренду>?»; on «так» append it to `learned/brands/<brand>.md`
-  (or `learned/formats/<format>.md`, `learned/general.md`) as `learned/README.md` shows.
+  (or `learned/formats/<format>.md`, `learned/general.md`) as `learned/README.md` shows, and commit it.
 - **«фінал» / «добре»**: the checklist below holds, then (bg) the final, and when woken (bg) the no-music version:
   ```
   .venv/bin/python pipeline/build.py inbox/<reel>/script.json > build/<reel>/logs/run_final.log 2>&1

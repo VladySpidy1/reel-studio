@@ -91,7 +91,7 @@ def new(brand, title, root=ROOT, today=None):
     b = brand_id(brand, root)
     if b is None:
         known = ", ".join(p.parent.name for p in sorted((root / "brands").glob("*/brand.json")))
-        raise SystemExit(f"unknown brand {brand!r} (known: {known}); a new brand is set up by the developer")
+        raise SystemExit(f"unknown brand {brand!r} (known: {known}); add brands/<id>/ first, like brands/yocase/")
     head = f"{b}_{(today or datetime.now()).strftime('%y%m%d')}"
     rid = "_".join(x for x in (head, slug(title, 40 - len(head) - 3)) if x)
     base, k = rid, 2

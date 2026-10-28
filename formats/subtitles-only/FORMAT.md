@@ -17,4 +17,4 @@ shows baked graphics, and says so in the report. Start from `template.json`.
 `projects/yocase_2477` (automatic layout) and `projects/yocase_2371` (brand name and CTA).
 
 ## Learned rules
-- Corrections from reels go to `learned/formats/subtitles-only.md` (gitignored); the developer promotes them here.
+- Corrections from reels go to `learned/formats/subtitles-only.md` (tracked, shared by both Macs); rules that hold are folded into this file.

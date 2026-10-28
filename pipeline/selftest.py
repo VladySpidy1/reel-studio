@@ -1,5 +1,5 @@
 """Fast checks of the creator tools and the repository's guards (seconds, no renders, nothing written to the repo).
-The developer runs it before every push; a fresh clone runs it after setup.
+Run it before every push (both Macs); a fresh clone runs it after setup.
 
 python selftest.py      one line per failure, then a summary; exit 1 on any failure
 
@@ -15,10 +15,10 @@ python selftest.py      one line per failure, then a summary; exit 1 on any fail
 - lock: a second job gets exit 2 with the holder's label, the holder's child passes;
 - refs: every pipeline/, formats/ and docs/ path named in CLAUDE.md, INSTALL.md, learned/README.md and the skills is
   in the repository (tracked, or new and not ignored);
-- tracked: nothing under learned/ (but its README), inbox/, done/, build/ or output/ is tracked (a pull would
-  overwrite the creator's file), and no CLAUDE.local.md is in the repository (Claude Code would load it);
-- ignore: .gitignore keeps her folders and per-machine files out of git and the docs/creator templates in;
-- settings: the tracked .claude/settings.json only allows; the deny and ask rules are in the creator template.
+- tracked: nothing under inbox/, done/, build/ or output/ is tracked (a pull would overwrite that Mac's file), and
+  no CLAUDE.local.md is in the repository (Claude Code would load it);
+- ignore: .gitignore keeps per-machine folders and files out of git, and learned/ and the docs/creator templates in;
+- settings: the tracked .claude/settings.json only allows (both Macs load it), and never allows cleanup.py apply.
 """
 import contextlib
 import fcntl
@@ -271,18 +271,18 @@ def t_refs(tmp):
 
 
 def t_tracked(tmp):
-    tracked = set(git("ls-files", "learned", "inbox", "done", "build", "output").splitlines())
-    assert tracked <= {"learned/README.md"}, f"tracked creator files: {sorted(tracked)}"
+    tracked = set(git("ls-files", "inbox", "done", "build", "output").splitlines())
+    assert not tracked, f"tracked per-machine files: {sorted(tracked)}"
     local = [f for f in repo_files() if Path(f).name == "CLAUDE.local.md"]
     assert not local, f"Claude Code loads these into every session that touches their folder: {local}"
 
 
 def t_ignore(tmp):
-    ignored = ["inbox/r/brief.md", "done/r/a.MOV", "learned/general.md", "learned/brands/yocase.md",
-               "assets/local/music/a.wav", "brands/yocase/local/font.ttf", "CLAUDE.local.md",
-               ".claude/settings.local.json", "build/r/logs/run_prep.log"]
-    kept = ["learned/README.md", "docs/creator/CLAUDE.local.template.md", "docs/creator/claude-settings.local.json",
-            "docs/creator/brief_template.uk.md", ".claude/settings.json", "CLAUDE.md"]
+    ignored = ["inbox/r/brief.md", "done/r/a.MOV", "assets/local/music/a.wav", "brands/yocase/local/font.ttf",
+               "CLAUDE.local.md", ".claude/settings.local.json", "build/r/logs/run_prep.log"]
+    kept = ["learned/README.md", "learned/general.md", "learned/brands/yocase.md",
+            "docs/creator/CLAUDE.local.template.md", "docs/creator/brief_template.uk.md", ".claude/settings.json",
+            "CLAUDE.md"]
     r = subprocess.run(["git", "-C", str(ROOT), "check-ignore", "--no-index", *ignored, *kept],
                        capture_output=True, text=True)
     got = set(r.stdout.splitlines())
@@ -294,12 +294,8 @@ def t_settings(tmp):
     shared = json.loads((ROOT / ".claude" / "settings.json").read_text())
     assert set(shared) == {"permissions"} and set(shared["permissions"]) == {"allow"}, \
         "the tracked settings may only allow (every session of both machines loads them)"
-    creator = json.loads((ROOT / "docs" / "creator" / "claude-settings.local.json").read_text())
-    assert creator["autoMemoryEnabled"] is False and creator["permissions"]["defaultMode"] == "default"
-    assert "Bash(.venv/bin/python pipeline/cleanup.py apply *)" in creator["permissions"]["ask"]
-    assert not any("cleanup.py apply" in r for r in shared["permissions"]["allow"])
-    rules = shared["permissions"]["allow"] + creator["permissions"]["deny"] + creator["permissions"]["ask"]
-    assert all(re.fullmatch(r"[A-Z]\w*(\(.+\))?", r) for r in rules), "malformed rule"
+    assert not any("cleanup.py apply" in r for r in shared["permissions"]["allow"]), "deleting files must ask"
+    assert all(re.fullmatch(r"[A-Z]\w*(\(.+\))?", r) for r in shared["permissions"]["allow"]), "malformed rule"
 
 
 TESTS = [t_brief, t_cmap, t_cleanup, t_inbox, t_lock, t_refs, t_tracked, t_ignore, t_settings]

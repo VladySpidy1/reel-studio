@@ -7,7 +7,7 @@ python review_frames.py output/<name>.mp4 --cuts [--out build/review/<name>_cuts
 
 --cuts: instead, the last frame before and the first frame after every cut of the slot's edl (output time), side by
 side, labelled with the cut's time and the words heard around it: does a head jump, does a word get clipped.
-It reads the build slot's timeline, so it refuses (exit 2) a video the slot did not render (--force: developer only).
+It reads the build slot's timeline, so it refuses (exit 2) a video the slot did not render (--force: debugging only).
 """
 import argparse
 import subprocess
@@ -91,7 +91,7 @@ def main():
     ap.add_argument("--cols", type=int, default=0, help="default: 6 with --full, else the count that gives the biggest tiles")
     ap.add_argument("--full", action="store_true", help="full-size tiles (360x640), 6 columns")
     ap.add_argument("--cuts", action="store_true", help="the frames on both sides of every cut instead of the screens")
-    ap.add_argument("--force", action="store_true", help="developer only: review a video the build slot did not render")
+    ap.add_argument("--force", action="store_true", help="debugging only: review a video the build slot did not render")
     a = ap.parse_args()
     meta = require_slot(render=a.video, force=a.force)
     if a.cuts:

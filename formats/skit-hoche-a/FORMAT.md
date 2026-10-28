@@ -30,4 +30,4 @@ camera creep, presets and lint profile are in `format.json`.
 - **Music:** the brand bed, static (no sidechain); 40 ms-ramped `dropouts` for a gag freeze.
 
 ## Learned rules
-- Corrections from reels go to `learned/formats/skit-hoche-a.md` (gitignored); the developer promotes them here.
+- Corrections from reels go to `learned/formats/skit-hoche-a.md` (tracked, shared by both Macs); rules that hold are folded into this file.
